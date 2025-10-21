@@ -16,6 +16,9 @@ const api = axios.create({
   createFilter: typeof createFilter;
   getPosts: typeof getPosts;
   createPost: typeof createPost;
+  getHaryanaFilterPresets: typeof getHaryanaFilterPresets;
+  getHaryanaArticles: typeof getHaryanaArticles;
+  analyzeHaryanaArticle: typeof analyzeHaryanaArticle;
 };
 
 // Types
@@ -36,6 +39,20 @@ export interface Article {
   url: string;
   published_at: string;
   crawled_at: string;
+}
+
+export interface ArticleWithScore extends Article {
+  relevance_score?: number;
+  matched_keywords?: string[];
+  sentiment?: string;
+  positive_matches?: string[];
+  negative_matches?: string[];
+}
+
+export interface HaryanaFilterPreset {
+  name: string;
+  description: string;
+  keyword_count: number;
 }
 
 export interface Filter {
@@ -109,6 +126,34 @@ export const createPost = async (post: Omit<Post, 'id' | 'posted_at' | 'twitter_
   return response.data;
 };
 
+// Haryana-specific API methods
+export const getHaryanaFilterPresets = async (): Promise<Record<string, HaryanaFilterPreset>> => {
+  const response = await api.get('/haryana/filter-presets');
+  return response.data;
+};
+
+export const getHaryanaArticles = async (params: {
+  filter_preset: string;
+  source_id?: number;
+  sentiment?: string;
+  min_score?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<ArticleWithScore[]> => {
+  const response = await api.get('/haryana/articles', { params });
+  return response.data;
+};
+
+export const analyzeHaryanaArticle = async (
+  article_id: number,
+  filter_preset: string
+): Promise<any> => {
+  const response = await api.get(`/haryana/articles/${article_id}/analyze`, {
+    params: { filter_preset }
+  });
+  return response.data;
+};
+
 // Export API functions as methods on the api object
 api.getSources = getSources;
 api.createSource = createSource;
@@ -118,5 +163,8 @@ api.getFilters = getFilters;
 api.createFilter = createFilter;
 api.getPosts = getPosts;
 api.createPost = createPost;
+api.getHaryanaFilterPresets = getHaryanaFilterPresets;
+api.getHaryanaArticles = getHaryanaArticles;
+api.analyzeHaryanaArticle = analyzeHaryanaArticle;
 
 export default api;

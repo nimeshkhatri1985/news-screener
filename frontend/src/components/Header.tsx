@@ -4,7 +4,8 @@ import {
   HomeIcon, 
   NewspaperIcon, 
   CogIcon, 
-  DocumentTextIcon 
+  DocumentTextIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 
 const Header: React.FC = () => {
@@ -12,6 +13,7 @@ const Header: React.FC = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: HomeIcon },
+    { name: 'Haryana News', href: '/haryana', icon: SparklesIcon },
     { name: 'Articles', href: '/articles', icon: NewspaperIcon },
     { name: 'Sources', href: '/sources', icon: CogIcon },
     { name: 'Posts', href: '/posts', icon: DocumentTextIcon },
@@ -34,7 +36,7 @@ const Header: React.FC = () => {
                   to={item.href}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-primary-100 text-primary-700'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >

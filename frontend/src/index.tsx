@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Sources from './pages/Sources';
 import Articles from './pages/Articles';
 import Posts from './pages/Posts';
+import HaryanaNews from './pages/HaryanaNews';
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ function App() {
               <Route path="/sources" element={<Sources />} />
               <Route path="/articles" element={<Articles />} />
               <Route path="/posts" element={<Posts />} />
+              <Route path="/haryana" element={<HaryanaNews />} />
             </Routes>
           </main>
         </div>

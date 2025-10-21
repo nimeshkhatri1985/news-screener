@@ -8,6 +8,11 @@ A full-stack web application for monitoring news sources, filtering articles, an
 - **Advanced Filtering**: Filter articles by keywords, categories, date ranges, and sources
 - **Article Browsing**: Search and browse articles with real-time filtering
 - **Post Creation**: Create social media posts from curated articles
+- **🌟 Haryana News Screener**: Specialized filtering for Haryana-specific news with:
+  - 8 topic-based filter presets (Tourism, Infrastructure, Economy, Education, etc.)
+  - Automatic sentiment analysis (Positive, Neutral, Negative)
+  - Relevance scoring based on keywords and indicators
+  - Location-aware filtering for all Haryana cities and regions
 - **Responsive Design**: Modern UI with Tailwind CSS
 - **Real-time Data**: Live updates with React Query
 
@@ -53,6 +58,9 @@ A full-stack web application for monitoring news sources, filtering articles, an
    ```bash
    cd backend
    pip install -r requirements.txt
+   # Set up Haryana news sources and filters
+   python setup_haryana.py
+   # Start the backend
    python main.py
    ```
 
@@ -66,6 +74,7 @@ A full-stack web application for monitoring news sources, filtering articles, an
 4. **Access the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
+   - Haryana News: http://localhost:3000/haryana
    - API Documentation: http://localhost:8000/docs
 
 ### Docker Setup

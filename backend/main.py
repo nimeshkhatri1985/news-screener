@@ -5,8 +5,20 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 import os
+
+# Import Haryana-specific configuration
+try:
+    from haryana_config import (
+        HARYANA_FILTER_PRESETS, 
+        calculate_relevance_score, 
+        is_haryana_relevant
+    )
+    HARYANA_CONFIG_AVAILABLE = True
+except ImportError:
+    HARYANA_CONFIG_AVAILABLE = False
+    print("⚠️  Warning: Haryana configuration not available")
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./news_screener.db")
@@ -77,6 +89,20 @@ class ArticleResponse(BaseModel):
     url: str
     published_at: datetime
     crawled_at: datetime
+
+class ArticleWithScoreResponse(BaseModel):
+    id: int
+    source_id: int
+    title: str
+    content: str
+    url: str
+    published_at: datetime
+    crawled_at: datetime
+    relevance_score: Optional[float] = None
+    matched_keywords: Optional[List[str]] = None
+    sentiment: Optional[str] = None
+    positive_matches: Optional[List[str]] = None
+    negative_matches: Optional[List[str]] = None
 
 class FilterCreate(BaseModel):
     name: str
@@ -244,6 +270,149 @@ async def create_post(post: PostCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_post)
     return db_post
+
+# Haryana-specific endpoints
+@app.get("/haryana/filter-presets")
+async def get_haryana_filter_presets():
+    """Get available Haryana filter presets"""
+    if not HARYANA_CONFIG_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Haryana configuration not available")
+    
+    # Return simplified preset information
+    presets = {}
+    for key, preset in HARYANA_FILTER_PRESETS.items():
+        presets[key] = {
+            "name": preset["name"],
+            "description": preset["description"],
+            "keyword_count": len(preset["keywords"])
+        }
+    return presets
+
+@app.get("/haryana/articles", response_model=List[ArticleWithScoreResponse])
+async def get_haryana_articles(
+    filter_preset: str,
+    source_id: Optional[int] = None,
+    sentiment: Optional[str] = None,  # positive, negative, neutral
+    min_score: Optional[int] = 0,
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    """
+    Get articles filtered and scored for Haryana-specific topics
+    
+    Args:
+        filter_preset: One of tourism, infrastructure, economy, education, agriculture, sports, environment, governance
+        source_id: Optional source filter
+        sentiment: Filter by sentiment (positive, negative, neutral)
+        min_score: Minimum relevance score
+        limit: Number of results
+        offset: Pagination offset
+    """
+    if not HARYANA_CONFIG_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Haryana configuration not available")
+    
+    if filter_preset not in HARYANA_FILTER_PRESETS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid filter preset. Available: {', '.join(HARYANA_FILTER_PRESETS.keys())}"
+        )
+    
+    # Get articles
+    query = db.query(Article)
+    
+    if source_id:
+        query = query.filter(Article.source_id == source_id)
+    
+    articles = query.order_by(Article.published_at.desc()).all()
+    
+    # Score and filter articles
+    scored_articles = []
+    for article in articles:
+        article_text = f"{article.title} {article.content}"
+        
+        # Check if article is Haryana-relevant
+        if not is_haryana_relevant(article_text):
+            continue
+        
+        # Calculate relevance score
+        score_data = calculate_relevance_score(article_text, filter_preset)
+        
+        # Filter by minimum score
+        if score_data["score"] < min_score:
+            continue
+        
+        # Filter by sentiment if specified
+        if sentiment and score_data["sentiment"] != sentiment:
+            continue
+        
+        # Create enhanced response
+        scored_article = ArticleWithScoreResponse(
+            id=article.id,
+            source_id=article.source_id,
+            title=article.title,
+            content=article.content,
+            url=article.url,
+            published_at=article.published_at,
+            crawled_at=article.crawled_at,
+            relevance_score=score_data["score"],
+            matched_keywords=score_data["matched_keywords"],
+            sentiment=score_data["sentiment"],
+            positive_matches=score_data.get("positive_matches", []),
+            negative_matches=score_data.get("negative_matches", [])
+        )
+        scored_articles.append(scored_article)
+    
+    # Sort by relevance score
+    scored_articles.sort(key=lambda x: x.relevance_score, reverse=True)
+    
+    # Apply pagination
+    return scored_articles[offset:offset + limit]
+
+@app.get("/haryana/articles/{article_id}/analyze")
+async def analyze_haryana_article(
+    article_id: int,
+    filter_preset: str,
+    db: Session = Depends(get_db)
+):
+    """Analyze a specific article against a Haryana filter preset"""
+    if not HARYANA_CONFIG_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Haryana configuration not available")
+    
+    if filter_preset not in HARYANA_FILTER_PRESETS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid filter preset. Available: {', '.join(HARYANA_FILTER_PRESETS.keys())}"
+        )
+    
+    article = db.query(Article).filter(Article.id == article_id).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    
+    article_text = f"{article.title} {article.content}"
+    
+    # Check Haryana relevance
+    haryana_relevant = is_haryana_relevant(article_text)
+    
+    # Calculate score
+    score_data = calculate_relevance_score(article_text, filter_preset)
+    
+    return {
+        "article_id": article_id,
+        "article_title": article.title,
+        "filter_preset": filter_preset,
+        "haryana_relevant": haryana_relevant,
+        "relevance_score": score_data["score"],
+        "sentiment": score_data["sentiment"],
+        "matched_keywords": score_data["matched_keywords"],
+        "positive_matches": score_data.get("positive_matches", []),
+        "negative_matches": score_data.get("negative_matches", []),
+        "analysis": {
+            "keyword_matches": len(score_data["matched_keywords"]),
+            "positive_indicators": len(score_data.get("positive_matches", [])),
+            "negative_indicators": len(score_data.get("negative_matches", []))
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn
