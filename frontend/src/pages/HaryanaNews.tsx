@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import api, { ArticleWithScore, HaryanaFilterPreset, TweetPreview } from '../services/api';
 import { 
   FunnelIcon, 
   SparklesIcon,
   ArrowTopRightOnSquareIcon,
-  HeartIcon,
   BuildingOfficeIcon,
   AcademicCapIcon,
   CurrencyDollarIcon,
@@ -31,8 +30,6 @@ const HaryanaNews: React.FC = () => {
   const [includeHashtags, setIncludeHashtags] = useState<boolean>(true);
   const [tweetSuccess, setTweetSuccess] = useState<string>('');
   const [tweetError, setTweetError] = useState<string>('');
-  
-  const queryClient = useQueryClient();
 
   // Fetch filter presets
   const { data: presets, isLoading: presetsLoading } = useQuery({
@@ -359,22 +356,7 @@ const HaryanaNews: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Positive/Negative Indicators */}
-                  {(article.positive_matches?.length || article.negative_matches?.length) ? (
-                    <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4 text-xs">
-                      {article.positive_matches && article.positive_matches.length > 0 && (
-                        <div className="flex items-center text-green-600">
-                          <HeartIcon className="h-4 w-4 mr-1" />
-                          <span>{article.positive_matches.length} positive indicators</span>
-                        </div>
-                      )}
-                      {article.negative_matches && article.negative_matches.length > 0 && (
-                        <div className="flex items-center text-red-600">
-                          <span>{article.negative_matches.length} negative indicators</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
+                  {/* Positive/Negative Indicators removed as per user preference */}
                 </div>
               ))}
             </div>
@@ -441,37 +423,7 @@ const HaryanaNews: React.FC = () => {
                 </div>
               )}
 
-              {selectedArticle.positive_matches && selectedArticle.positive_matches.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-green-900 mb-2">Positive Indicators</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedArticle.positive_matches.map((match, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm"
-                      >
-                        {match}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedArticle.negative_matches && selectedArticle.negative_matches.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-red-900 mb-2">Negative Indicators</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedArticle.negative_matches.map((match, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm"
-                      >
-                        {match}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Positive/Negative indicators removed as per user preference */}
 
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <a
