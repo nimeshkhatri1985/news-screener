@@ -91,7 +91,7 @@ const Posts: React.FC = () => {
                 required
               >
                 <option value={0}>Choose an article...</option>
-                {articles?.map((article) => (
+                {articles?.map((article: any) => (
                   <option key={article.id} value={article.id}>
                     {article.title.substring(0, 80)}...
                   </option>
@@ -149,8 +149,8 @@ const Posts: React.FC = () => {
           </div>
         ) : posts && posts.length > 0 ? (
           <div className="space-y-4">
-            {posts.map((post) => {
-              const article = articles?.find(a => a.id === post.article_id);
+            {posts.map((post: any) => {
+              const article = articles?.find((a: any) => a.id === post.article_id);
               return (
                 <div key={post.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start justify-between">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import api, { ArticleWithScore, HaryanaFilterPreset } from '../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api, { ArticleWithScore, HaryanaFilterPreset, TweetPreview } from '../services/api';
 import { 
   FunnelIcon, 
   SparklesIcon,
@@ -12,15 +12,27 @@ import {
   TruckIcon,
   TrophyIcon,
   GlobeAltIcon,
-  CheckBadgeIcon
+  CheckBadgeIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
+import { 
+  ChatBubbleLeftRightIcon as TwitterIcon 
+} from '@heroicons/react/24/solid';
 import { format } from 'date-fns';
 
 const HaryanaNews: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string>('tourism');
-  const [selectedSentiment, setSelectedSentiment] = useState<string>('');
-  const [minScore, setMinScore] = useState<number>(0);
+  const [selectedSentiment, setSelectedSentiment] = useState<string>('positive'); // Default to positive only
+  const [minScore, setMinScore] = useState<number>(20); // Default to 20 to show only positive news
   const [selectedArticle, setSelectedArticle] = useState<ArticleWithScore | null>(null);
+  const [tweetModalArticle, setTweetModalArticle] = useState<ArticleWithScore | null>(null);
+  const [tweetPreview, setTweetPreview] = useState<TweetPreview | null>(null);
+  const [customMessage, setCustomMessage] = useState<string>('');
+  const [includeHashtags, setIncludeHashtags] = useState<boolean>(true);
+  const [tweetSuccess, setTweetSuccess] = useState<string>('');
+  const [tweetError, setTweetError] = useState<string>('');
+  
+  const queryClient = useQueryClient();
 
   // Fetch filter presets
   const { data: presets, isLoading: presetsLoading } = useQuery({
@@ -39,6 +51,80 @@ const HaryanaNews: React.FC = () => {
     }),
     enabled: !!selectedPreset
   });
+
+  // Twitter status query
+  const { data: twitterStatus } = useQuery({
+    queryKey: ['twitter-status'],
+    queryFn: api.getTwitterStatus
+  });
+
+  // Tweet preview mutation
+  const previewMutation = useMutation({
+    mutationFn: api.previewTweet,
+    onSuccess: (data) => {
+      setTweetPreview(data);
+      setTweetError('');
+    },
+    onError: (error: any) => {
+      setTweetError(error.response?.data?.detail || 'Failed to preview tweet');
+    }
+  });
+
+  // Post to Twitter mutation
+  const postMutation = useMutation({
+    mutationFn: api.postToTwitter,
+    onSuccess: (data) => {
+      setTweetSuccess(data.tweet_url || 'Tweet posted successfully!');
+      setTweetError('');
+      setTimeout(() => {
+        setTweetModalArticle(null);
+        setTweetSuccess('');
+        setCustomMessage('');
+        setTweetPreview(null);
+      }, 3000);
+    },
+    onError: (error: any) => {
+      setTweetError(error.response?.data?.detail || 'Failed to post tweet');
+    }
+  });
+
+  // Handle opening tweet modal
+  const handleOpenTweetModal = (article: ArticleWithScore, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTweetModalArticle(article);
+    setTweetSuccess('');
+    setTweetError('');
+    setCustomMessage('');
+    setTweetPreview(null);
+    
+    // Auto-preview
+    previewMutation.mutate({
+      article_id: article.id,
+      include_hashtags: includeHashtags
+    });
+  };
+
+  // Handle preview update
+  const handlePreviewUpdate = () => {
+    if (tweetModalArticle) {
+      previewMutation.mutate({
+        article_id: tweetModalArticle.id,
+        custom_message: customMessage || undefined,
+        include_hashtags: includeHashtags
+      });
+    }
+  };
+
+  // Handle post to Twitter
+  const handlePostToTwitter = () => {
+    if (tweetModalArticle) {
+      postMutation.mutate({
+        article_id: tweetModalArticle.id,
+        custom_message: customMessage || undefined,
+        include_hashtags: includeHashtags
+      });
+    }
+  };
 
   const getPresetIcon = (key: string) => {
     const icons: Record<string, any> = {
@@ -94,7 +180,7 @@ const HaryanaNews: React.FC = () => {
           <div className="text-center py-4">Loading categories...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {presets && Object.entries(presets).map(([key, preset]) => {
+            {presets && (Object.entries(presets) as [string, HaryanaFilterPreset][]).map(([key, preset]) => {
               const Icon = getPresetIcon(key);
               const isSelected = selectedPreset === key;
               return (
@@ -201,7 +287,7 @@ const HaryanaNews: React.FC = () => {
             </div>
           ) : articles && articles.length > 0 ? (
             <div className="space-y-4">
-              {articles.map((article) => (
+              {articles.map((article: ArticleWithScore) => (
                 <div
                   key={article.id}
                   className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer"
@@ -228,7 +314,7 @@ const HaryanaNews: React.FC = () => {
                       <div className="flex items-center text-gray-600">
                         <span className="font-medium mr-2">Keywords:</span>
                         <div className="flex flex-wrap gap-1">
-                          {article.matched_keywords.slice(0, 5).map((keyword, idx) => (
+                          {article.matched_keywords.slice(0, 5).map((keyword: string, idx: number) => (
                             <span
                               key={idx}
                               className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
@@ -249,6 +335,17 @@ const HaryanaNews: React.FC = () => {
                       <span className="text-gray-500">
                         {format(new Date(article.published_at), 'MMM dd, yyyy')}
                       </span>
+                      
+                      {/* Twitter Button */}
+                      <button
+                        onClick={(e) => handleOpenTweetModal(article, e)}
+                        className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                        title="Post to Twitter"
+                      >
+                        <TwitterIcon className="h-4 w-4 mr-1" />
+                        <span className="text-sm">Tweet</span>
+                      </button>
+                      
                       <a
                         href={article.url}
                         target="_blank"
@@ -391,6 +488,147 @@ const HaryanaNews: React.FC = () => {
                   className="btn-secondary"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Twitter Post Modal */}
+      {tweetModalArticle && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => setTweetModalArticle(null)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                  <TwitterIcon className="h-6 w-6 mr-2 text-blue-500" />
+                  Post to Twitter
+                </h2>
+                <button
+                  onClick={() => setTweetModalArticle(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Twitter Status */}
+              {twitterStatus && !twitterStatus.configured && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-yellow-800 text-sm">
+                    ⚠️ Twitter API not configured. See TWITTER_SETUP_GUIDE.md for setup instructions.
+                  </p>
+                </div>
+              )}
+
+              {/* Article Info */}
+              <div className="mb-4 p-4 bg-gray-50 rounded">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {tweetModalArticle.title}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Score: {tweetModalArticle.relevance_score} | Sentiment: {tweetModalArticle.sentiment}
+                </p>
+              </div>
+
+              {/* Custom Message Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Custom Message (Optional)
+                </label>
+                <textarea
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  onBlur={handlePreviewUpdate}
+                  placeholder="Add your own message..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              {/* Include Hashtags Toggle */}
+              <div className="mb-4 flex items-center">
+                <input
+                  type="checkbox"
+                  id="includeHashtags"
+                  checked={includeHashtags}
+                  onChange={(e) => {
+                    setIncludeHashtags(e.target.checked);
+                    setTimeout(handlePreviewUpdate, 100);
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="includeHashtags" className="ml-2 text-sm text-gray-700">
+                  Include hashtags (#Haryana #HaryanaNews)
+                </label>
+              </div>
+
+              {/* Tweet Preview */}
+              {previewMutation.isPending && (
+                <div className="mb-4 p-4 bg-gray-50 rounded">
+                  <p className="text-gray-600">Loading preview...</p>
+                </div>
+              )}
+
+              {tweetPreview && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tweet Preview ({tweetPreview.character_count}/280 characters)
+                  </label>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded whitespace-pre-wrap">
+                    {tweetPreview.tweet_text}
+                  </div>
+                </div>
+              )}
+
+              {/* Success Message */}
+              {tweetSuccess && (
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
+                  <p className="text-green-800">
+                    ✅ Tweet posted successfully!
+                    {tweetSuccess.startsWith('http') && (
+                      <a
+                        href={tweetSuccess}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-green-600 hover:text-green-700 underline"
+                      >
+                        View Tweet
+                      </a>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {tweetError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
+                  <p className="text-red-800">❌ {tweetError}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handlePostToTwitter}
+                  disabled={postMutation.isPending || !twitterStatus?.configured || !!tweetSuccess}
+                  className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <TwitterIcon className="h-4 w-4 mr-2" />
+                  {postMutation.isPending ? 'Posting...' : 'Post to Twitter'}
+                </button>
+                <button
+                  onClick={() => setTweetModalArticle(null)}
+                  className="btn-secondary"
+                >
+                  {tweetSuccess ? 'Done' : 'Cancel'}
                 </button>
               </div>
             </div>

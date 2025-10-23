@@ -20,6 +20,14 @@ except ImportError:
     HARYANA_CONFIG_AVAILABLE = False
     print("⚠️  Warning: Haryana configuration not available")
 
+# Import Twitter service
+try:
+    from twitter_service import twitter_service
+    TWITTER_AVAILABLE = True
+except ImportError:
+    TWITTER_AVAILABLE = False
+    print("⚠️  Warning: Twitter service not available")
+
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./news_screener.db")
 engine = create_engine(DATABASE_URL)
@@ -272,6 +280,25 @@ async def create_post(post: PostCreate, db: Session = Depends(get_db)):
     return db_post
 
 # Haryana-specific endpoints
+@app.get("/haryana/stats")
+async def get_haryana_stats(db: Session = Depends(get_db)):
+    """Get statistics about Haryana articles"""
+    total_articles = db.query(Article).count()
+    
+    # Count Haryana-relevant articles
+    haryana_count = 0
+    all_articles = db.query(Article).all()
+    for article in all_articles:
+        article_text = f"{article.title} {article.content}"
+        if is_haryana_relevant(article_text):
+            haryana_count += 1
+    
+    return {
+        "total_articles": total_articles,
+        "haryana_relevant": haryana_count,
+        "config_available": HARYANA_CONFIG_AVAILABLE
+    }
+
 @app.get("/haryana/filter-presets")
 async def get_haryana_filter_presets():
     """Get available Haryana filter presets"""
@@ -411,6 +438,174 @@ async def analyze_haryana_article(
             "keyword_matches": len(score_data["matched_keywords"]),
             "positive_indicators": len(score_data.get("positive_matches", [])),
             "negative_indicators": len(score_data.get("negative_matches", []))
+        }
+    }
+
+# Twitter Integration Endpoints
+class TweetRequest(BaseModel):
+    article_id: int
+    custom_message: Optional[str] = None
+    include_hashtags: bool = True
+
+class TweetTextRequest(BaseModel):
+    text: str
+
+@app.get("/twitter/status")
+async def get_twitter_status():
+    """Check Twitter API configuration status"""
+    if not TWITTER_AVAILABLE:
+        return {
+            "configured": False,
+            "message": "Twitter service not available"
+        }
+    
+    is_configured = twitter_service.is_configured()
+    
+    if is_configured:
+        # Try to verify credentials
+        verification = twitter_service.verify_credentials()
+        return {
+            "configured": True,
+            "verified": verification.get('success', False),
+            "user_info": {
+                "username": verification.get('username'),
+                "name": verification.get('name')
+            } if verification.get('success') else None,
+            "message": verification.get('message')
+        }
+    else:
+        return {
+            "configured": False,
+            "message": "Twitter API credentials not set. Please configure environment variables."
+        }
+
+@app.post("/twitter/post")
+async def post_to_twitter(request: TweetRequest, db: Session = Depends(get_db)):
+    """Post an article to Twitter"""
+    if not TWITTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Twitter service not available")
+    
+    if not twitter_service.is_configured():
+        raise HTTPException(
+            status_code=400, 
+            detail="Twitter API not configured. Please set environment variables."
+        )
+    
+    # Get the article
+    article = db.query(Article).filter(Article.id == request.article_id).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    
+    # Convert article to dict
+    article_dict = {
+        'id': article.id,
+        'title': article.title,
+        'url': article.url,
+        'content': article.content
+    }
+    
+    # Post to Twitter
+    result = twitter_service.post_article_to_twitter(
+        article=article_dict,
+        custom_message=request.custom_message,
+        include_hashtags=request.include_hashtags
+    )
+    
+    if result['success']:
+        # Update the post record in database
+        post = Post(
+            article_id=article.id,
+            platform='twitter',
+            status='posted',
+            posted_at=datetime.utcnow(),
+            post_url=result.get('tweet_url'),
+            post_content=result.get('tweet_text', '')
+        )
+        db.add(post)
+        db.commit()
+        
+        return result
+    else:
+        raise HTTPException(status_code=500, detail=result.get('message', 'Failed to post tweet'))
+
+@app.post("/twitter/post-custom")
+async def post_custom_tweet(request: TweetTextRequest):
+    """Post custom text to Twitter"""
+    if not TWITTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Twitter service not available")
+    
+    if not twitter_service.is_configured():
+        raise HTTPException(
+            status_code=400,
+            detail="Twitter API not configured. Please set environment variables."
+        )
+    
+    # Post the custom tweet
+    result = twitter_service.post_tweet(text=request.text)
+    
+    if result['success']:
+        return result
+    else:
+        raise HTTPException(status_code=500, detail=result.get('message', 'Failed to post tweet'))
+
+@app.post("/twitter/preview")
+async def preview_tweet(request: TweetRequest, db: Session = Depends(get_db)):
+    """Preview how a tweet will look without posting - optimized for positive news"""
+    if not TWITTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Twitter service not available")
+    
+    # Get the article
+    article = db.query(Article).filter(Article.id == request.article_id).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    
+    # Get article metadata from Haryana analysis if available
+    from haryana_config import calculate_relevance_score, is_haryana_relevant, HARYANA_FILTER_PRESETS
+    
+    # Calculate relevance and get metadata - detect best matching category
+    article_text = f"{article.title} {article.content}"
+    article_lower = article_text.lower()
+    
+    # Detect the best category based on article content
+    best_category = 'tourism'  # default
+    best_score = 0
+    
+    for category_key in HARYANA_FILTER_PRESETS.keys():
+        temp_analysis = calculate_relevance_score(article_text, category_key)
+        if temp_analysis['score'] > best_score:
+            best_score = temp_analysis['score']
+            best_category = category_key
+    
+    # Use the best matching category
+    analysis = calculate_relevance_score(article_text, best_category)
+    
+    # Convert article to dict with additional metadata for better tweet generation
+    article_dict = {
+        'id': article.id,
+        'title': article.title,
+        'url': article.url,
+        'content': article.content,
+        'sentiment': analysis.get('sentiment', 'positive'),
+        'matched_keywords': analysis.get('matched_keywords', []),
+        'positive_matches': analysis.get('positive_matches', [])
+    }
+    
+    # Generate engaging tweet text (premium format with summary)
+    tweet_text = twitter_service.create_engaging_tweet(
+        article=article_dict,
+        custom_message=request.custom_message,
+        include_hashtags=request.include_hashtags,
+        max_length=4000,  # Premium Twitter accounts support up to 4000 characters
+        use_premium=True  # Use premium long-form tweets with summary
+    )
+    
+    return {
+        'tweet_text': tweet_text,
+        'character_count': len(tweet_text),
+        'article': {
+            'id': article.id,
+            'title': article.title,
+            'url': article.url
         }
     }
 

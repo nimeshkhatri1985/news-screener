@@ -41,58 +41,91 @@ HARYANA_NEWS_SOURCES = [
 HARYANA_FILTER_PRESETS = {
     "tourism": {
         "name": "Tourism & Heritage",
-        "description": "News about tourism development, heritage sites, cultural events",
+        "description": "Positive news about tourism development, heritage sites, cultural events",
         "keywords": [
             "tourism", "tourist", "heritage", "monument", "temple", "fort",
             "cultural", "festival", "museum", "archaeological", "surajkund",
             "kurukshetra", "panchkula", "morni hills", "sultanpur", "bird sanctuary",
             "kingdom of dreams", "damdama lake", "vintage car museum", "craft mela",
-            "adventure", "hotel", "resort", "pilgrim", "pilgrimage", "visitor"
+            "adventure", "hotel", "resort", "pilgrim", "pilgrimage", "visitor",
+            "destination", "attraction", "site", "tour", "travel", "experience"
         ],
         "positive_indicators": [
-            "inaugurate", "launch", "new", "development", "promote", "boost",
-            "attract", "improve", "enhance", "popular", "growing", "increase"
+            "inaugurate", "inaugurated", "launch", "launched", "unveil", "unveiled",
+            "new", "develop", "developed", "development", "promote", "promoted",
+            "boost", "boosted", "attract", "attracted", "improve", "improved",
+            "enhance", "enhanced", "popular", "growing", "increase", "increased",
+            "record", "milestone", "award", "recognition", "world-class", "state-of-the-art",
+            "restore", "restored", "renovation", "renovated", "beautify", "beautified",
+            "expand", "expanded", "upgrade", "upgraded", "modern", "modernize",
+            "success", "successful", "thriving", "flourishing", "vibrant", "celebrate"
         ],
         "negative_indicators": [
-            "close", "shutdown", "decline", "decrease", "protest", "damage"
+            "close", "closed", "shutdown", "decline", "declined", "decrease", "decreased",
+            "protest", "damage", "damaged", "vandal", "theft", "stolen", "neglect",
+            "deteriorate", "deteriorating", "poor", "bad", "worst", "fail", "failed",
+            "cancel", "cancelled", "delay", "delayed", "problem", "issue", "concern"
         ]
     },
     "infrastructure": {
         "name": "Infrastructure Development",
-        "description": "News about infrastructure projects, development works",
+        "description": "Positive news about infrastructure projects, development works, modernization",
         "keywords": [
             "infrastructure", "development", "project", "construction", "road",
             "highway", "metro", "railway", "airport", "bridge", "flyover",
             "expressway", "smart city", "urban", "rural", "water supply",
             "electricity", "power", "sewage", "drainage", "public transport",
-            "bus", "connectivity", "network", "modernization", "upgrade"
+            "bus", "connectivity", "network", "modernization", "upgrade",
+            "corridor", "terminal", "station", "facility", "complex"
         ],
         "positive_indicators": [
-            "complete", "inaugurate", "launch", "approve", "sanction", "fund",
-            "allocate", "start", "begin", "improve", "enhance", "upgrade",
-            "modernize", "expand", "extend", "new", "state-of-the-art"
+            "complete", "completed", "inaugurate", "inaugurated", "launch", "launched",
+            "approve", "approved", "sanction", "sanctioned", "fund", "funded",
+            "allocate", "allocated", "start", "started", "begin", "began",
+            "improve", "improved", "enhance", "enhanced", "upgrade", "upgraded",
+            "modernize", "modernized", "expand", "expanded", "extend", "extended",
+            "new", "state-of-the-art", "world-class", "cutting-edge", "advanced",
+            "milestone", "record", "fast-track", "accelerate", "accelerated",
+            "transform", "transformed", "revolutionize", "revolutionized",
+            "boost", "boosted", "strengthen", "strengthened", "efficient"
         ],
         "negative_indicators": [
-            "delay", "stall", "halt", "cancel", "poor", "deteriorate", "damage"
+            "delay", "delayed", "stall", "stalled", "halt", "halted",
+            "cancel", "cancelled", "poor", "deteriorate", "deteriorating",
+            "damage", "damaged", "collapse", "collapsed", "accident", "crash",
+            "protest", "oppose", "opposition", "problem", "issue", "concern",
+            "fail", "failed", "failure", "inadequate", "insufficient"
         ]
     },
     "economy": {
         "name": "Economic Development",
-        "description": "Business, industry, investment, and economic growth news",
+        "description": "Positive news about business growth, industry expansion, investment, job creation",
         "keywords": [
             "economy", "economic", "business", "industry", "investment", "startup",
             "manufacturing", "factory", "plant", "company", "enterprise", "trade",
             "export", "import", "GDP", "growth", "jobs", "employment", "industrial",
             "technology park", "IT", "software", "innovation", "entrepreneur",
-            "IMT", "HSIIDC", "sector", "zone", "hub", "incubator"
+            "IMT", "HSIIDC", "sector", "zone", "hub", "incubator", "unicorn",
+            "funding", "venture", "capital", "market", "revenue", "profit"
         ],
         "positive_indicators": [
-            "growth", "increase", "boost", "expand", "launch", "invest",
-            "create", "generate", "attract", "improve", "rise", "surge",
-            "record", "milestone", "achievement", "success", "profitable"
+            "growth", "growing", "grow", "increase", "increased", "boost", "boosted",
+            "expand", "expanded", "expansion", "launch", "launched", "invest", "invested",
+            "create", "created", "generate", "generated", "attract", "attracted",
+            "improve", "improved", "rise", "rising", "surge", "surged", "soar", "soared",
+            "record", "record-breaking", "milestone", "achievement", "achieve", "achieved",
+            "success", "successful", "profitable", "profit", "revenue", "thriving",
+            "flourishing", "prosperous", "prosperity", "boom", "booming", "robust",
+            "strong", "strengthen", "strengthened", "scale", "scaling", "multiply",
+            "double", "triple", "breakthrough", "pioneer", "pioneering", "innovative",
+            "world-class", "leading", "leader", "first", "best", "top", "premier"
         ],
         "negative_indicators": [
-            "decline", "decrease", "loss", "shutdown", "layoff", "crisis"
+            "decline", "declined", "decrease", "decreased", "loss", "lose", "lost",
+            "shutdown", "shut down", "close", "closed", "layoff", "lay off", "retrench",
+            "crisis", "recession", "slowdown", "slump", "fall", "fell", "drop", "dropped",
+            "fail", "failed", "failure", "bankruptcy", "bankrupt", "debt", "struggle",
+            "struggling", "poor", "worst", "bad", "negative", "problem", "concern"
         ]
     },
     "education": {
@@ -199,11 +232,12 @@ HARYANA_LOCATIONS = [
 ]
 
 # Sentiment scoring weights
+# HEAVILY penalize negative content to show ONLY positive progress news
 SENTIMENT_WEIGHTS = {
-    "positive_indicator": 2.0,
-    "negative_indicator": -2.0,
-    "positive_context": 1.0,
-    "negative_context": -1.0,
+    "positive_indicator": 3.0,      # Increased from 2.0
+    "negative_indicator": -10.0,    # Increased penalty from -2.0 to -10.0
+    "positive_context": 1.5,        # Increased from 1.0
+    "negative_context": -5.0,       # Increased penalty from -1.0
     "neutral": 0.0
 }
 
@@ -252,15 +286,33 @@ def calculate_relevance_score(article_text, filter_preset_key):
     )
     
     # Determine overall sentiment
-    if sentiment_score > 1:
+    # STRICT POSITIVE FILTERING: Require positive sentiment or heavily penalize
+    if sentiment_score > 2:  # Raised threshold from 1 to 2
         sentiment = "positive"
     elif sentiment_score < -1:
         sentiment = "negative"
     else:
         sentiment = "neutral"
     
-    # Total score
-    total_score = keyword_score + (sentiment_score * 5)
+    # Total score calculation
+    # HEAVILY penalize negative and neutral content
+    if sentiment == "negative":
+        # Negative articles get massive penalty - essentially filtered out
+        total_score = keyword_score + (sentiment_score * 10) - 100
+    elif sentiment == "neutral":
+        # Neutral articles get moderate penalty to prioritize positive news
+        total_score = keyword_score + (sentiment_score * 5) - 20
+    else:  # positive
+        # Positive articles get bonus
+        total_score = keyword_score + (sentiment_score * 8) + 20
+    
+    # Additional filter: If article has ANY negative indicators, heavily penalize
+    if len(negative_matches) > 0:
+        total_score -= (len(negative_matches) * 30)
+    
+    # Bonus for multiple positive indicators
+    if len(positive_matches) >= 3:
+        total_score += 25
     
     return {
         "score": total_score,

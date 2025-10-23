@@ -74,7 +74,7 @@ const Articles: React.FC = () => {
               className="input-field"
             >
               <option value="">All Sources</option>
-              {sources?.map((source) => (
+              {sources?.map((source: any) => (
                 <option key={source.id} value={source.id}>
                   {source.name}
                 </option>
@@ -183,7 +183,7 @@ const Articles: React.FC = () => {
             ))}
           </div>
         ) : filteredArticles.length > 0 ? (
-          filteredArticles.map((article) => (
+          filteredArticles.map((article: any) => (
             <div key={article.id} className="card p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -198,7 +198,7 @@ const Articles: React.FC = () => {
                       {format(new Date(article.published_at), 'MMM d, yyyy • h:mm a')}
                     </span>
                     <span>
-                      Source: {sources?.find(s => s.id === article.source_id)?.name}
+                      Source: {sources?.find((s: any) => s.id === article.source_id)?.name}
                     </span>
                   </div>
                 </div>

@@ -2,25 +2,6 @@ import axios, { AxiosInstance } from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-}) as AxiosInstance & {
-  getSources: typeof getSources;
-  createSource: typeof createSource;
-  getArticles: typeof getArticles;
-  searchArticles: typeof searchArticles;
-  getFilters: typeof getFilters;
-  createFilter: typeof createFilter;
-  getPosts: typeof getPosts;
-  createPost: typeof createPost;
-  getHaryanaFilterPresets: typeof getHaryanaFilterPresets;
-  getHaryanaArticles: typeof getHaryanaArticles;
-  analyzeHaryanaArticle: typeof analyzeHaryanaArticle;
-};
-
 // Types
 export interface Source {
   id: number;
@@ -71,6 +52,64 @@ export interface Post {
   twitter_id: string | null;
   status: string;
 }
+
+export interface TwitterStatus {
+  configured: boolean;
+  verified?: boolean;
+  user_info?: {
+    username: string;
+    name: string;
+  };
+  message: string;
+}
+
+export interface TweetPreview {
+  tweet_text: string;
+  character_count: number;
+  article: {
+    id: number;
+    title: string;
+    url: string;
+  };
+}
+
+export interface TweetRequest {
+  article_id: number;
+  custom_message?: string;
+  include_hashtags?: boolean;
+}
+
+export interface TweetResponse {
+  success: boolean;
+  tweet_id?: string;
+  tweet_url?: string;
+  message: string;
+}
+
+// Extended API interface
+interface ExtendedAxiosInstance extends AxiosInstance {
+  getSources: () => Promise<Source[]>;
+  createSource: (source: Omit<Source, 'id' | 'created_at'>) => Promise<Source>;
+  getArticles: (params?: any) => Promise<Article[]>;
+  searchArticles: (params: any) => Promise<Article[]>;
+  getFilters: () => Promise<Filter[]>;
+  createFilter: (filter: Omit<Filter, 'id' | 'created_at'>) => Promise<Filter>;
+  getPosts: () => Promise<Post[]>;
+  createPost: (post: Omit<Post, 'id' | 'posted_at' | 'twitter_id' | 'status'>) => Promise<Post>;
+  getHaryanaFilterPresets: () => Promise<any>;
+  getHaryanaArticles: (params: any) => Promise<any>;
+  analyzeHaryanaArticle: (article_id: number, filter_preset: string) => Promise<any>;
+  getTwitterStatus: () => Promise<TwitterStatus>;
+  previewTweet: (request: TweetRequest) => Promise<TweetPreview>;
+  postToTwitter: (request: TweetRequest) => Promise<TweetResponse>;
+}
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+}) as ExtendedAxiosInstance;
 
 // API Methods
 export const getSources = async (): Promise<Source[]> => {
@@ -154,6 +193,22 @@ export const analyzeHaryanaArticle = async (
   return response.data;
 };
 
+// Twitter Integration
+export const getTwitterStatus = async (): Promise<TwitterStatus> => {
+  const response = await api.get('/twitter/status');
+  return response.data;
+};
+
+export const previewTweet = async (request: TweetRequest): Promise<TweetPreview> => {
+  const response = await api.post('/twitter/preview', request);
+  return response.data;
+};
+
+export const postToTwitter = async (request: TweetRequest): Promise<TweetResponse> => {
+  const response = await api.post('/twitter/post', request);
+  return response.data;
+};
+
 // Export API functions as methods on the api object
 api.getSources = getSources;
 api.createSource = createSource;
@@ -166,5 +221,8 @@ api.createPost = createPost;
 api.getHaryanaFilterPresets = getHaryanaFilterPresets;
 api.getHaryanaArticles = getHaryanaArticles;
 api.analyzeHaryanaArticle = analyzeHaryanaArticle;
+api.getTwitterStatus = getTwitterStatus;
+api.previewTweet = previewTweet;
+api.postToTwitter = postToTwitter;
 
 export default api;

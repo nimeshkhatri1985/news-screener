@@ -129,7 +129,7 @@ const Sources: React.FC = () => {
           </div>
         ) : sources && sources.length > 0 ? (
           <div className="space-y-4">
-            {sources.map((source) => (
+            {sources.map((source: any) => (
               <div key={source.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>

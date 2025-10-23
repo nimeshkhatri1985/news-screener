@@ -104,7 +104,7 @@ const Dashboard: React.FC = () => {
           </div>
         ) : articles && articles.length > 0 ? (
           <div className="space-y-4">
-            {articles.map((article) => (
+            {articles.map((article: any) => (
               <div key={article.id} className="border-b border-gray-200 pb-4 last:border-b-0">
                 <h3 className="font-medium text-gray-900 mb-1">{article.title}</h3>
                 <p className="text-sm text-gray-600 mb-2">

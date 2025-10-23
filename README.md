@@ -8,6 +8,11 @@ A full-stack web application for monitoring news sources, filtering articles, an
 - **Advanced Filtering**: Filter articles by keywords, categories, date ranges, and sources
 - **Article Browsing**: Search and browse articles with real-time filtering
 - **Post Creation**: Create social media posts from curated articles
+- **🐦 Twitter Integration**: Post articles directly to Twitter with one click
+  - Automatic tweet generation with hashtags
+  - Tweet preview before posting
+  - Custom message support
+  - Post tracking and history
 - **🌟 Haryana News Screener**: Specialized filtering for Haryana-specific news with:
   - 8 topic-based filter presets (Tourism, Infrastructure, Economy, Education, etc.)
   - Automatic sentiment analysis (Positive, Neutral, Negative)
