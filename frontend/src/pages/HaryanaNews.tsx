@@ -21,8 +21,8 @@ import { format } from 'date-fns';
 
 const HaryanaNews: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string>('tourism');
-  const [selectedSentiment, setSelectedSentiment] = useState<string>('positive'); // Default to positive only
-  const [minScore, setMinScore] = useState<number>(20); // Default to 20 to show only positive news
+  const [selectedSentiment, setSelectedSentiment] = useState<string>('positive');
+  const [minScore, setMinScore] = useState<number>(20);
   const [selectedArticle, setSelectedArticle] = useState<ArticleWithScore | null>(null);
   const [tweetModalArticle, setTweetModalArticle] = useState<ArticleWithScore | null>(null);
   const [tweetPreview, setTweetPreview] = useState<TweetPreview | null>(null);
@@ -32,13 +32,11 @@ const HaryanaNews: React.FC = () => {
   const [tweetError, setTweetError] = useState<string>('');
   const [usePremium, setUsePremium] = useState<boolean>(true);
 
-  // Fetch filter presets
   const { data: presets, isLoading: presetsLoading } = useQuery({
     queryKey: ['haryana-presets'],
     queryFn: api.getHaryanaFilterPresets
   });
 
-  // Fetch filtered articles
   const { data: articles, isLoading: articlesLoading } = useQuery({
     queryKey: ['haryana-articles', selectedPreset, selectedSentiment, minScore],
     queryFn: () => api.getHaryanaArticles({
@@ -50,13 +48,11 @@ const HaryanaNews: React.FC = () => {
     enabled: !!selectedPreset
   });
 
-  // Twitter status query
   const { data: twitterStatus } = useQuery({
     queryKey: ['twitter-status'],
     queryFn: api.getTwitterStatus
   });
 
-  // Tweet preview mutation
   const previewMutation = useMutation({
     mutationFn: api.previewTweet,
     onSuccess: (data) => {
@@ -68,7 +64,6 @@ const HaryanaNews: React.FC = () => {
     }
   });
 
-  // Post to Twitter mutation
   const postMutation = useMutation({
     mutationFn: api.postToTwitter,
     onSuccess: (data) => {
@@ -86,37 +81,39 @@ const HaryanaNews: React.FC = () => {
     }
   });
 
-  // Handle opening tweet modal
   const handleOpenTweetModal = (article: ArticleWithScore, e: React.MouseEvent) => {
     e.stopPropagation();
     setTweetModalArticle(article);
     setTweetSuccess('');
     setTweetError('');
     setCustomMessage('');
-    setUsePremium(false); // Default to free account
+    setUsePremium(false);
     setTweetPreview(null);
     
-    // Auto-preview
     previewMutation.mutate({
       article_id: article.id,
       include_hashtags: includeHashtags,
-      use_premium: false // Default to free account
+      use_premium: false
     });
   };
 
-  // Handle preview update
-  const handlePreviewUpdate = () => {
+  const handlePreviewUpdate = (premiumOverride?: boolean) => {
     if (tweetModalArticle) {
+      const isPremium = premiumOverride !== undefined ? premiumOverride : usePremium;
+      console.log('🔍 Preview Request:', {
+        article_id: tweetModalArticle.id,
+        use_premium: isPremium,
+        include_hashtags: includeHashtags
+      });
       previewMutation.mutate({
         article_id: tweetModalArticle.id,
         custom_message: customMessage || undefined,
         include_hashtags: includeHashtags,
-        use_premium: usePremium
+        use_premium: isPremium
       });
     }
   };
 
-  // Handle post to Twitter
   const handlePostToTwitter = () => {
     if (tweetModalArticle) {
       postMutation.mutate({
@@ -160,7 +157,6 @@ const HaryanaNews: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="card p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -175,7 +171,6 @@ const HaryanaNews: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Presets */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Select News Category</h2>
         {presetsLoading ? (
@@ -212,7 +207,6 @@ const HaryanaNews: React.FC = () => {
         )}
       </div>
 
-      {/* Advanced Filters */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Refine Results</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -259,7 +253,6 @@ const HaryanaNews: React.FC = () => {
         </div>
       </div>
 
-      {/* Results Summary */}
       {articles && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -276,7 +269,6 @@ const HaryanaNews: React.FC = () => {
         </div>
       )}
 
-      {/* Articles List */}
       <div className="card">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -338,7 +330,6 @@ const HaryanaNews: React.FC = () => {
                         {format(new Date(article.published_at), 'MMM dd, yyyy')}
                       </span>
                       
-                      {/* Twitter Button */}
                       <button
                         onClick={(e) => handleOpenTweetModal(article, e)}
                         className="flex items-center px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -360,8 +351,6 @@ const HaryanaNews: React.FC = () => {
                       </a>
                     </div>
                   </div>
-
-                  {/* Positive/Negative Indicators removed as per user preference */}
                 </div>
               ))}
             </div>
@@ -375,7 +364,6 @@ const HaryanaNews: React.FC = () => {
         </div>
       </div>
 
-      {/* Article Detail Modal */}
       {selectedArticle && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -428,8 +416,6 @@ const HaryanaNews: React.FC = () => {
                 </div>
               )}
 
-              {/* Positive/Negative indicators removed as per user preference */}
-
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <a
                   href={selectedArticle.url}
@@ -452,7 +438,6 @@ const HaryanaNews: React.FC = () => {
         </div>
       )}
 
-      {/* Twitter Post Modal */}
       {tweetModalArticle && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -476,7 +461,6 @@ const HaryanaNews: React.FC = () => {
                 </button>
               </div>
 
-              {/* Twitter Status */}
               {twitterStatus && !twitterStatus.configured && (
                 <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-yellow-800 text-sm">
@@ -485,7 +469,6 @@ const HaryanaNews: React.FC = () => {
                 </div>
               )}
 
-              {/* Article Info */}
               <div className="mb-4 p-4 bg-gray-50 rounded">
                 <h3 className="font-semibold text-gray-900 mb-2">
                   {tweetModalArticle.title}
@@ -495,7 +478,6 @@ const HaryanaNews: React.FC = () => {
                 </p>
               </div>
 
-              {/* Custom Message Input */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Custom Message (Optional)
@@ -503,14 +485,13 @@ const HaryanaNews: React.FC = () => {
                 <textarea
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
-                  onBlur={handlePreviewUpdate}
+                  onBlur={() => handlePreviewUpdate()}
                   placeholder="Add your own message..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                 />
               </div>
 
-              {/* Tweet Format Selection */}
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="block text-sm font-medium text-gray-900 mb-3">
                   Twitter Account Type
@@ -523,13 +504,14 @@ const HaryanaNews: React.FC = () => {
                       name="accountType"
                       checked={!usePremium}
                       onChange={() => {
+                        console.log('📻 Switching to FREE account');
                         setUsePremium(false);
-                        setTimeout(handlePreviewUpdate, 100);
+                        setTimeout(() => handlePreviewUpdate(false), 100);
                       }}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
                     <label htmlFor="freeAccount" className="ml-2 text-sm text-gray-700">
-                      <span className="font-medium">Free Account</span> - Short tweet (280 characters max)
+                      <span className="font-medium">Free Account</span> - Concise tweet (~150-250 chars: title + hashtags + link)
                     </label>
                   </div>
                   <div className="flex items-center">
@@ -539,19 +521,19 @@ const HaryanaNews: React.FC = () => {
                       name="accountType"
                       checked={usePremium}
                       onChange={() => {
+                        console.log('📻 Switching to PREMIUM account');
                         setUsePremium(true);
-                        setTimeout(handlePreviewUpdate, 100);
+                        setTimeout(() => handlePreviewUpdate(true), 100);
                       }}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
                     <label htmlFor="premiumAccount" className="ml-2 text-sm text-gray-700">
-                      <span className="font-medium">Premium Account</span> - Long tweet with summary (4000 characters max)
+                      <span className="font-medium">Premium Account</span> - Detailed tweet with full summary (280-4000 chars)
                     </label>
                   </div>
                 </div>
               </div>
 
-              {/* Include Hashtags Toggle */}
               <div className="mb-4 flex items-center">
                 <input
                   type="checkbox"
@@ -568,7 +550,6 @@ const HaryanaNews: React.FC = () => {
                 </label>
               </div>
 
-              {/* Tweet Preview */}
               {previewMutation.isPending && (
                 <div className="mb-4 p-4 bg-gray-50 rounded">
                   <p className="text-gray-600">Loading preview...</p>
@@ -586,7 +567,6 @@ const HaryanaNews: React.FC = () => {
                 </div>
               )}
 
-              {/* Success Message */}
               {tweetSuccess && (
                 <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
                   <p className="text-green-800">
@@ -605,14 +585,12 @@ const HaryanaNews: React.FC = () => {
                 </div>
               )}
 
-              {/* Error Message */}
               {tweetError && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
                   <p className="text-red-800">❌ {tweetError}</p>
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={handlePostToTwitter}
@@ -638,4 +616,3 @@ const HaryanaNews: React.FC = () => {
 };
 
 export default HaryanaNews;
-
