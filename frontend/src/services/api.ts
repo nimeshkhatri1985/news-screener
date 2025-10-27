@@ -77,6 +77,7 @@ export interface TweetRequest {
   article_id: number;
   custom_message?: string;
   include_hashtags?: boolean;
+  use_premium?: boolean;
 }
 
 export interface TweetResponse {

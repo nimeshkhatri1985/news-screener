@@ -30,6 +30,7 @@ const HaryanaNews: React.FC = () => {
   const [includeHashtags, setIncludeHashtags] = useState<boolean>(true);
   const [tweetSuccess, setTweetSuccess] = useState<string>('');
   const [tweetError, setTweetError] = useState<string>('');
+  const [usePremium, setUsePremium] = useState<boolean>(true);
 
   // Fetch filter presets
   const { data: presets, isLoading: presetsLoading } = useQuery({
@@ -92,12 +93,14 @@ const HaryanaNews: React.FC = () => {
     setTweetSuccess('');
     setTweetError('');
     setCustomMessage('');
+    setUsePremium(false); // Default to free account
     setTweetPreview(null);
     
     // Auto-preview
     previewMutation.mutate({
       article_id: article.id,
-      include_hashtags: includeHashtags
+      include_hashtags: includeHashtags,
+      use_premium: false // Default to free account
     });
   };
 
@@ -107,7 +110,8 @@ const HaryanaNews: React.FC = () => {
       previewMutation.mutate({
         article_id: tweetModalArticle.id,
         custom_message: customMessage || undefined,
-        include_hashtags: includeHashtags
+        include_hashtags: includeHashtags,
+        use_premium: usePremium
       });
     }
   };
@@ -118,7 +122,8 @@ const HaryanaNews: React.FC = () => {
       postMutation.mutate({
         article_id: tweetModalArticle.id,
         custom_message: customMessage || undefined,
-        include_hashtags: includeHashtags
+        include_hashtags: includeHashtags,
+        use_premium: usePremium
       });
     }
   };
@@ -505,6 +510,47 @@ const HaryanaNews: React.FC = () => {
                 />
               </div>
 
+              {/* Tweet Format Selection */}
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  Twitter Account Type
+                </label>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="freeAccount"
+                      name="accountType"
+                      checked={!usePremium}
+                      onChange={() => {
+                        setUsePremium(false);
+                        setTimeout(handlePreviewUpdate, 100);
+                      }}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <label htmlFor="freeAccount" className="ml-2 text-sm text-gray-700">
+                      <span className="font-medium">Free Account</span> - Short tweet (280 characters max)
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="premiumAccount"
+                      name="accountType"
+                      checked={usePremium}
+                      onChange={() => {
+                        setUsePremium(true);
+                        setTimeout(handlePreviewUpdate, 100);
+                      }}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <label htmlFor="premiumAccount" className="ml-2 text-sm text-gray-700">
+                      <span className="font-medium">Premium Account</span> - Long tweet with summary (4000 characters max)
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               {/* Include Hashtags Toggle */}
               <div className="mb-4 flex items-center">
                 <input
@@ -532,7 +578,7 @@ const HaryanaNews: React.FC = () => {
               {tweetPreview && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tweet Preview ({tweetPreview.character_count}/280 characters)
+                    Tweet Preview ({tweetPreview.character_count}/{usePremium ? '4000' : '280'} characters)
                   </label>
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded whitespace-pre-wrap">
                     {tweetPreview.tweet_text}

@@ -446,6 +446,7 @@ class TweetRequest(BaseModel):
     article_id: int
     custom_message: Optional[str] = None
     include_hashtags: bool = True
+    use_premium: bool = True  # Default to premium for backward compatibility
 
 class TweetTextRequest(BaseModel):
     text: str
@@ -508,7 +509,8 @@ async def post_to_twitter(request: TweetRequest, db: Session = Depends(get_db)):
     result = twitter_service.post_article_to_twitter(
         article=article_dict,
         custom_message=request.custom_message,
-        include_hashtags=request.include_hashtags
+        include_hashtags=request.include_hashtags,
+        use_premium=request.use_premium
     )
     
     if result['success']:
@@ -590,13 +592,14 @@ async def preview_tweet(request: TweetRequest, db: Session = Depends(get_db)):
         'positive_matches': analysis.get('positive_matches', [])
     }
     
-    # Generate engaging tweet text (premium format with summary)
+    # Generate engaging tweet text (use requested format)
+    max_length = 4000 if request.use_premium else 280
     tweet_text = twitter_service.create_engaging_tweet(
         article=article_dict,
         custom_message=request.custom_message,
         include_hashtags=request.include_hashtags,
-        max_length=4000,  # Premium Twitter accounts support up to 4000 characters
-        use_premium=True  # Use premium long-form tweets with summary
+        max_length=max_length,
+        use_premium=request.use_premium
     )
     
     return {
