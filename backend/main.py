@@ -7,6 +7,10 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional, Dict
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import Haryana-specific configuration
 try:
@@ -74,6 +78,9 @@ class Post(Base):
     posted_at = Column(DateTime)
     twitter_id = Column(String)
     status = Column(String, default="draft")  # draft, posted, failed
+    platform = Column(String, default="twitter")  # twitter, facebook, etc.
+    post_url = Column(String)  # URL to the posted tweet/post
+    post_content = Column(Text)  # The actual posted content
 
 # Pydantic Models
 class SourceCreate(BaseModel):
