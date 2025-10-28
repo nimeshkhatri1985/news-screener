@@ -764,6 +764,40 @@ class TwitterService:
                 'error': str(e),
                 'message': 'Failed to verify Twitter credentials'
             }
+    
+    def get_status(self) -> Dict:
+        """
+        Get Twitter API configuration status
+        
+        Returns:
+            Dictionary with configuration status and verification info
+        """
+        if not self.is_configured():
+            return {
+                'configured': False,
+                'verified': False,
+                'message': 'Twitter API credentials not configured. Please set up your Twitter API keys.'
+            }
+        
+        # Try to verify credentials
+        verification = self.verify_credentials()
+        
+        if verification['success']:
+            return {
+                'configured': True,
+                'verified': True,
+                'user_info': {
+                    'username': verification.get('username'),
+                    'name': verification.get('name')
+                },
+                'message': f"Twitter API configured and verified for @{verification.get('username')}"
+            }
+        else:
+            return {
+                'configured': True,
+                'verified': False,
+                'message': 'Twitter API credentials configured but verification failed. Please check your keys.'
+            }
 
 
 # Create singleton instance

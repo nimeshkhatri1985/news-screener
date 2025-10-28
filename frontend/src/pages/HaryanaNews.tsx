@@ -12,7 +12,8 @@ import {
   TrophyIcon,
   GlobeAltIcon,
   CheckBadgeIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { 
   ChatBubbleLeftRightIcon as TwitterIcon 
@@ -31,6 +32,8 @@ const HaryanaNews: React.FC = () => {
   const [tweetSuccess, setTweetSuccess] = useState<string>('');
   const [tweetError, setTweetError] = useState<string>('');
   const [usePremium, setUsePremium] = useState<boolean>(true);
+  const [scrapeSuccess, setScrapeSuccess] = useState<string>('');
+  const [scrapeError, setScrapeError] = useState<string>('');
 
   const { data: presets, isLoading: presetsLoading } = useQuery({
     queryKey: ['haryana-presets'],
@@ -78,6 +81,26 @@ const HaryanaNews: React.FC = () => {
     },
     onError: (error: any) => {
       setTweetError(error.response?.data?.detail || 'Failed to post tweet');
+    }
+  });
+
+  // Manual scraping mutation
+  const scrapeMutation = useMutation({
+    mutationFn: api.triggerScraping,
+    onSuccess: (data) => {
+      const { results } = data;
+      setScrapeSuccess(
+        `Scraping complete! Found ${results.articles_found} articles, ${results.new_articles} new. Refresh page to see updates.`
+      );
+      setScrapeError('');
+      // Refresh articles after scraping
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+    },
+    onError: (error: any) => {
+      setScrapeError(error.response?.data?.detail || 'Failed to trigger scraping');
+      setScrapeSuccess('');
     }
   });
 
@@ -159,7 +182,7 @@ const HaryanaNews: React.FC = () => {
     <div className="space-y-6">
       <div className="card p-6">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 flex items-center">
               <SparklesIcon className="h-8 w-8 text-blue-600 mr-3" />
               Haryana News Screener
@@ -168,7 +191,38 @@ const HaryanaNews: React.FC = () => {
               Intelligent filtering for Haryana-specific news with topic-based categorization and sentiment analysis
             </p>
           </div>
+          <div>
+            <button
+              onClick={() => scrapeMutation.mutate()}
+              disabled={scrapeMutation.isPending}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Manually trigger news scraping from all sources"
+            >
+              <ArrowPathIcon className={`h-5 w-5 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
+              {scrapeMutation.isPending ? 'Scraping...' : 'Scrape Now'}
+            </button>
+          </div>
         </div>
+
+        {/* Scraping Success Message */}
+        {scrapeSuccess && (
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-green-800 flex items-center">
+              <CheckBadgeIcon className="h-5 w-5 mr-2" />
+              {scrapeSuccess}
+            </p>
+          </div>
+        )}
+
+        {/* Scraping Error Message */}
+        {scrapeError && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800 flex items-center">
+              <XMarkIcon className="h-5 w-5 mr-2" />
+              {scrapeError}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="card p-6">

@@ -87,6 +87,30 @@ export interface TweetResponse {
   message: string;
 }
 
+export interface ScrapeResults {
+  sources_scraped: number;
+  articles_found: number;
+  new_articles: number;
+  errors: string[];
+}
+
+export interface ScrapeResponse {
+  success: boolean;
+  message: string;
+  results: ScrapeResults;
+}
+
+export interface ScrapeStatus {
+  total_articles: number;
+  last_24h: number;
+  last_hour: number;
+  latest_article: {
+    title: string;
+    crawled_at: string;
+  } | null;
+  active_sources: number;
+}
+
 // Extended API interface
 interface ExtendedAxiosInstance extends AxiosInstance {
   getSources: () => Promise<Source[]>;
@@ -103,6 +127,8 @@ interface ExtendedAxiosInstance extends AxiosInstance {
   getTwitterStatus: () => Promise<TwitterStatus>;
   previewTweet: (request: TweetRequest) => Promise<TweetPreview>;
   postToTwitter: (request: TweetRequest) => Promise<TweetResponse>;
+  triggerScraping: () => Promise<ScrapeResponse>;
+  getScrapeStatus: () => Promise<ScrapeStatus>;
 }
 
 const api = axios.create({
@@ -210,6 +236,17 @@ export const postToTwitter = async (request: TweetRequest): Promise<TweetRespons
   return response.data;
 };
 
+// Scraping functions
+export const triggerScraping = async (): Promise<ScrapeResponse> => {
+  const response = await api.post('/scrape/trigger');
+  return response.data;
+};
+
+export const getScrapeStatus = async (): Promise<ScrapeStatus> => {
+  const response = await api.get('/scrape/status');
+  return response.data;
+};
+
 // Export API functions as methods on the api object
 api.getSources = getSources;
 api.createSource = createSource;
@@ -225,5 +262,7 @@ api.analyzeHaryanaArticle = analyzeHaryanaArticle;
 api.getTwitterStatus = getTwitterStatus;
 api.previewTweet = previewTweet;
 api.postToTwitter = postToTwitter;
+api.triggerScraping = triggerScraping;
+api.getScrapeStatus = getScrapeStatus;
 
 export default api;

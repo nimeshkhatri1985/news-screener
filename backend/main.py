@@ -4,27 +4,20 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, B
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Import Haryana-specific configuration
 try:
-    from haryana_config import (
-        HARYANA_FILTER_PRESETS, 
-        calculate_relevance_score, 
-        is_haryana_relevant
-    )
+    from haryana_config import HARYANA_FILTER_PRESETS, calculate_relevance_score, is_haryana_relevant
     HARYANA_CONFIG_AVAILABLE = True
 except ImportError:
     HARYANA_CONFIG_AVAILABLE = False
     print("⚠️  Warning: Haryana configuration not available")
 
-# Import Twitter service
 try:
     from twitter_service import twitter_service
     TWITTER_AVAILABLE = True
@@ -32,16 +25,13 @@ except ImportError:
     TWITTER_AVAILABLE = False
     print("⚠️  Warning: Twitter service not available")
 
-# Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./news_screener.db")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Database Models
 class Source(Base):
     __tablename__ = "sources"
-    
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     url = Column(String)
@@ -51,7 +41,6 @@ class Source(Base):
 
 class Article(Base):
     __tablename__ = "articles"
-    
     id = Column(Integer, primary_key=True, index=True)
     source_id = Column(Integer, index=True)
     title = Column(String, index=True)
@@ -62,27 +51,24 @@ class Article(Base):
 
 class Filter(Base):
     __tablename__ = "filters"
-    
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
-    keywords = Column(Text)  # JSON string of keywords
+    keywords = Column(Text)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Post(Base):
     __tablename__ = "posts"
-    
     id = Column(Integer, primary_key=True, index=True)
     article_id = Column(Integer, index=True)
     content = Column(Text)
     posted_at = Column(DateTime)
     twitter_id = Column(String)
-    status = Column(String, default="draft")  # draft, posted, failed
-    platform = Column(String, default="twitter")  # twitter, facebook, etc.
-    post_url = Column(String)  # URL to the posted tweet/post
-    post_content = Column(Text)  # The actual posted content
+    status = Column(String, default="draft")
+    platform = Column(String, default="twitter")
+    post_url = Column(String)
+    post_content = Column(Text)
 
-# Pydantic Models
 class SourceCreate(BaseModel):
     name: str
     url: str
@@ -104,20 +90,6 @@ class ArticleResponse(BaseModel):
     url: str
     published_at: datetime
     crawled_at: datetime
-
-class ArticleWithScoreResponse(BaseModel):
-    id: int
-    source_id: int
-    title: str
-    content: str
-    url: str
-    published_at: datetime
-    crawled_at: datetime
-    relevance_score: Optional[float] = None
-    matched_keywords: Optional[List[str]] = None
-    sentiment: Optional[str] = None
-    positive_matches: Optional[List[str]] = None
-    negative_matches: Optional[List[str]] = None
 
 class FilterCreate(BaseModel):
     name: str
@@ -142,19 +114,24 @@ class PostResponse(BaseModel):
     twitter_id: Optional[str]
     status: str
 
-# FastAPI app
-app = FastAPI(title="News Screener API", version="1.0.0")
+class TweetRequest(BaseModel):
+    article_id: int
+    custom_message: Optional[str] = None
+    include_hashtags: bool = True
+    use_premium: bool = False
 
-# CORS middleware
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="News Screener API")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Database dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -162,17 +139,18 @@ def get_db():
     finally:
         db.close()
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
-# API Routes
 @app.get("/")
 async def root():
-    return {"message": "News Screener API"}
+    return {
+        "message": "News Screener API",
+        "version": "1.0.0",
+        "haryana_config": HARYANA_CONFIG_AVAILABLE,
+        "twitter_available": TWITTER_AVAILABLE
+    }
 
 @app.get("/sources", response_model=List[SourceResponse])
 async def get_sources(db: Session = Depends(get_db)):
-    sources = db.query(Source).filter(Source.is_active == True).all()
+    sources = db.query(Source).all()
     return sources
 
 @app.post("/sources", response_model=SourceResponse)
@@ -184,98 +162,37 @@ async def create_source(source: SourceCreate, db: Session = Depends(get_db)):
     return db_source
 
 @app.get("/articles", response_model=List[ArticleResponse])
-async def get_articles(
-    source_id: Optional[int] = None,
-    keywords: Optional[str] = None,
-    category: Optional[str] = None,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
+async def get_articles(source_id: Optional[int] = None, limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
     query = db.query(Article)
-    
-    # Filter by source
     if source_id:
         query = query.filter(Article.source_id == source_id)
-    
-    # Filter by keywords (search in title and content)
-    if keywords:
-        keyword_list = [kw.strip().lower() for kw in keywords.split(',')]
-        for keyword in keyword_list:
-            query = query.filter(
-                db.or_(
-                    Article.title.ilike(f'%{keyword}%'),
-                    Article.content.ilike(f'%{keyword}%')
-                )
-            )
-    
-    # Filter by category (if we add category field later)
-    if category:
-        query = query.filter(Article.title.ilike(f'%{category}%'))
-    
-    # Filter by date range
-    if date_from:
-        try:
-            from_date = datetime.fromisoformat(date_from)
-            query = query.filter(Article.published_at >= from_date)
-        except ValueError:
-            pass
-    
-    if date_to:
-        try:
-            to_date = datetime.fromisoformat(date_to)
-            query = query.filter(Article.published_at <= to_date)
-        except ValueError:
-            pass
-    
     articles = query.order_by(Article.published_at.desc()).offset(offset).limit(limit).all()
+    return articles
+
+@app.get("/search", response_model=List[ArticleResponse])
+async def search_articles(q: str, source_id: Optional[int] = None, limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
+    query = db.query(Article)
+    if source_id:
+        query = query.filter(Article.source_id == source_id)
+    articles = query.filter((Article.title.like(f"%{q}%")) | (Article.content.like(f"%{q}%"))).order_by(Article.published_at.desc()).offset(offset).limit(limit).all()
     return articles
 
 @app.get("/filters", response_model=List[FilterResponse])
 async def get_filters(db: Session = Depends(get_db)):
-    filters = db.query(Filter).filter(Filter.is_active == True).all()
+    filters = db.query(Filter).all()
     return filters
 
 @app.post("/filters", response_model=FilterResponse)
-async def create_filter(filter_data: FilterCreate, db: Session = Depends(get_db)):
-    db_filter = Filter(**filter_data.dict())
+async def create_filter(filter: FilterCreate, db: Session = Depends(get_db)):
+    db_filter = Filter(**filter.dict())
     db.add(db_filter)
     db.commit()
     db.refresh(db_filter)
     return db_filter
 
-@app.get("/search", response_model=List[ArticleResponse])
-async def search_articles(
-    q: str,
-    source_id: Optional[int] = None,
-    limit: int = 20,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
-    """Full-text search across articles"""
-    query = db.query(Article)
-    
-    # Filter by source if specified
-    if source_id:
-        query = query.filter(Article.source_id == source_id)
-    
-    # Search in title and content
-    search_term = f'%{q.lower()}%'
-    query = query.filter(
-        db.or_(
-            Article.title.ilike(search_term),
-            Article.content.ilike(search_term)
-        )
-    )
-    
-    articles = query.order_by(Article.published_at.desc()).offset(offset).limit(limit).all()
-    return articles
-
 @app.get("/posts", response_model=List[PostResponse])
 async def get_posts(db: Session = Depends(get_db)):
-    posts = db.query(Post).order_by(Post.posted_at.desc()).all()
+    posts = db.query(Post).all()
     return posts
 
 @app.post("/posts", response_model=PostResponse)
@@ -286,338 +203,109 @@ async def create_post(post: PostCreate, db: Session = Depends(get_db)):
     db.refresh(db_post)
     return db_post
 
-# Haryana-specific endpoints
-@app.get("/haryana/stats")
-async def get_haryana_stats(db: Session = Depends(get_db)):
-    """Get statistics about Haryana articles"""
-    total_articles = db.query(Article).count()
+if HARYANA_CONFIG_AVAILABLE:
+    @app.get("/haryana/filter-presets")
+    async def get_haryana_filter_presets():
+        presets = {}
+        for key, config in HARYANA_FILTER_PRESETS.items():
+            presets[key] = {"name": config["name"], "description": config["description"], "keyword_count": len(config["keywords"])}
+        return presets
     
-    # Count Haryana-relevant articles
-    haryana_count = 0
-    all_articles = db.query(Article).all()
-    for article in all_articles:
+    @app.get("/haryana/articles")
+    async def get_haryana_articles(filter_preset: str, source_id: Optional[int] = None, sentiment: Optional[str] = None, min_score: int = 0, limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
+        if filter_preset not in HARYANA_FILTER_PRESETS:
+            raise HTTPException(status_code=400, detail=f"Invalid filter preset: {filter_preset}")
+        query = db.query(Article)
+        if source_id:
+            query = query.filter(Article.source_id == source_id)
+        articles = query.order_by(Article.published_at.desc()).limit(limit * 3).all()
+        scored_articles = []
+        for article in articles:
+            article_text = f"{article.title} {article.content}"
+            if not is_haryana_relevant(article_text):
+                continue
+            result = calculate_relevance_score(article_text, filter_preset)
+            relevance_score = result.get("score", result.get("relevance_score", 0))
+            if relevance_score < min_score:
+                continue
+            if sentiment and result["sentiment"] != sentiment:
+                continue
+            article_dict = {"id": article.id, "source_id": article.source_id, "title": article.title, "content": article.content, "url": article.url, "published_at": article.published_at.isoformat(), "crawled_at": article.crawled_at.isoformat(), "relevance_score": relevance_score, "matched_keywords": result["matched_keywords"], "sentiment": result["sentiment"], "positive_matches": result.get("positive_matches", []), "negative_matches": result.get("negative_matches", [])}
+            scored_articles.append(article_dict)
+        scored_articles.sort(key=lambda x: x["relevance_score"], reverse=True)
+        return scored_articles[:limit]
+    
+    @app.get("/haryana/articles/{article_id}/analyze")
+    async def analyze_haryana_article(article_id: int, filter_preset: str, db: Session = Depends(get_db)):
+        article = db.query(Article).filter(Article.id == article_id).first()
+        if not article:
+            raise HTTPException(status_code=404, detail="Article not found")
+        if filter_preset not in HARYANA_FILTER_PRESETS:
+            raise HTTPException(status_code=400, detail=f"Invalid filter preset: {filter_preset}")
         article_text = f"{article.title} {article.content}"
-        if is_haryana_relevant(article_text):
-            haryana_count += 1
-    
-    return {
-        "total_articles": total_articles,
-        "haryana_relevant": haryana_count,
-        "config_available": HARYANA_CONFIG_AVAILABLE
-    }
+        result = calculate_relevance_score(article_text, filter_preset)
+        return {"article_id": article.id, "title": article.title, "filter_preset": filter_preset, "is_relevant": is_haryana_relevant(article_text), **result}
 
-@app.get("/haryana/filter-presets")
-async def get_haryana_filter_presets():
-    """Get available Haryana filter presets"""
-    if not HARYANA_CONFIG_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Haryana configuration not available")
+if TWITTER_AVAILABLE:
+    @app.get("/twitter/status")
+    async def get_twitter_status():
+        return twitter_service.get_status()
     
-    # Return simplified preset information
-    presets = {}
-    for key, preset in HARYANA_FILTER_PRESETS.items():
-        presets[key] = {
-            "name": preset["name"],
-            "description": preset["description"],
-            "keyword_count": len(preset["keywords"])
-        }
-    return presets
+    @app.post("/twitter/post")
+    async def post_to_twitter(request: TweetRequest, db: Session = Depends(get_db)):
+        article = db.query(Article).filter(Article.id == request.article_id).first()
+        if not article:
+            raise HTTPException(status_code=404, detail="Article not found")
+        article_dict = {'id': article.id, 'title': article.title, 'url': article.url, 'content': article.content[:500]}
+        max_length = 4000 if request.use_premium else 280
+        tweet_text = twitter_service.create_engaging_tweet(article=article_dict, custom_message=request.custom_message, include_hashtags=request.include_hashtags, max_length=max_length, use_premium=request.use_premium)
+        result = twitter_service.post_tweet(tweet_text)
+        if result['success']:
+            db_post = Post(article_id=article.id, content=tweet_text, posted_at=datetime.utcnow(), twitter_id=result.get('tweet_id'), status='posted', platform='twitter', post_url=result.get('tweet_url'), post_content=tweet_text)
+            db.add(db_post)
+            db.commit()
+            return {'success': True, 'tweet_id': result.get('tweet_id'), 'tweet_url': result.get('tweet_url'), 'message': 'Tweet posted successfully!'}
+        else:
+            raise HTTPException(status_code=500, detail=result.get('error', 'Failed to post tweet'))
+    
+    @app.post("/twitter/preview")
+    async def preview_tweet(request: TweetRequest, db: Session = Depends(get_db)):
+        article = db.query(Article).filter(Article.id == request.article_id).first()
+        if not article:
+            raise HTTPException(status_code=404, detail="Article not found")
+        article_dict = {'id': article.id, 'title': article.title, 'url': article.url, 'content': article.content[:500]}
+        max_length = 4000 if request.use_premium else 280
+        tweet_text = twitter_service.create_engaging_tweet(article=article_dict, custom_message=request.custom_message, include_hashtags=request.include_hashtags, max_length=max_length, use_premium=request.use_premium)
+        return {'tweet_text': tweet_text, 'character_count': len(tweet_text), 'article': {'id': article.id, 'title': article.title, 'url': article.url}}
 
-@app.get("/haryana/articles", response_model=List[ArticleWithScoreResponse])
-async def get_haryana_articles(
-    filter_preset: str,
-    source_id: Optional[int] = None,
-    sentiment: Optional[str] = None,  # positive, negative, neutral
-    min_score: Optional[int] = 0,
-    limit: int = 50,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
-    """
-    Get articles filtered and scored for Haryana-specific topics
-    
-    Args:
-        filter_preset: One of tourism, infrastructure, economy, education, agriculture, sports, environment, governance
-        source_id: Optional source filter
-        sentiment: Filter by sentiment (positive, negative, neutral)
-        min_score: Minimum relevance score
-        limit: Number of results
-        offset: Pagination offset
-    """
-    if not HARYANA_CONFIG_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Haryana configuration not available")
-    
-    if filter_preset not in HARYANA_FILTER_PRESETS:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid filter preset. Available: {', '.join(HARYANA_FILTER_PRESETS.keys())}"
-        )
-    
-    # Get articles
-    query = db.query(Article)
-    
-    if source_id:
-        query = query.filter(Article.source_id == source_id)
-    
-    articles = query.order_by(Article.published_at.desc()).all()
-    
-    # Score and filter articles
-    scored_articles = []
-    for article in articles:
-        article_text = f"{article.title} {article.content}"
-        
-        # Check if article is Haryana-relevant
-        if not is_haryana_relevant(article_text):
-            continue
-        
-        # Calculate relevance score
-        score_data = calculate_relevance_score(article_text, filter_preset)
-        
-        # Filter by minimum score
-        if score_data["score"] < min_score:
-            continue
-        
-        # Filter by sentiment if specified
-        if sentiment and score_data["sentiment"] != sentiment:
-            continue
-        
-        # Create enhanced response
-        scored_article = ArticleWithScoreResponse(
-            id=article.id,
-            source_id=article.source_id,
-            title=article.title,
-            content=article.content,
-            url=article.url,
-            published_at=article.published_at,
-            crawled_at=article.crawled_at,
-            relevance_score=score_data["score"],
-            matched_keywords=score_data["matched_keywords"],
-            sentiment=score_data["sentiment"],
-            positive_matches=score_data.get("positive_matches", []),
-            negative_matches=score_data.get("negative_matches", [])
-        )
-        scored_articles.append(scored_article)
-    
-    # Sort by relevance score
-    scored_articles.sort(key=lambda x: x.relevance_score, reverse=True)
-    
-    # Apply pagination
-    return scored_articles[offset:offset + limit]
+@app.post("/scrape/trigger")
+async def trigger_manual_scrape():
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.dirname(__file__))
+        sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+        from auto_scrape import auto_scrape
+        results = auto_scrape(verbose=False)
+        return {"success": True, "message": "Scraping completed successfully", "results": {"sources_scraped": results.get('sources_scraped', 0), "articles_found": results.get('articles_found', 0), "new_articles": results.get('new_articles', 0), "errors": results.get('errors', [])}}
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error during manual scrape: {error_detail}")
+        raise HTTPException(status_code=500, detail=f"Failed to trigger scraping: {str(e)}")
 
-@app.get("/haryana/articles/{article_id}/analyze")
-async def analyze_haryana_article(
-    article_id: int,
-    filter_preset: str,
-    db: Session = Depends(get_db)
-):
-    """Analyze a specific article against a Haryana filter preset"""
-    if not HARYANA_CONFIG_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Haryana configuration not available")
-    
-    if filter_preset not in HARYANA_FILTER_PRESETS:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid filter preset. Available: {', '.join(HARYANA_FILTER_PRESETS.keys())}"
-        )
-    
-    article = db.query(Article).filter(Article.id == article_id).first()
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    
-    article_text = f"{article.title} {article.content}"
-    
-    # Check Haryana relevance
-    haryana_relevant = is_haryana_relevant(article_text)
-    
-    # Calculate score
-    score_data = calculate_relevance_score(article_text, filter_preset)
-    
-    return {
-        "article_id": article_id,
-        "article_title": article.title,
-        "filter_preset": filter_preset,
-        "haryana_relevant": haryana_relevant,
-        "relevance_score": score_data["score"],
-        "sentiment": score_data["sentiment"],
-        "matched_keywords": score_data["matched_keywords"],
-        "positive_matches": score_data.get("positive_matches", []),
-        "negative_matches": score_data.get("negative_matches", []),
-        "analysis": {
-            "keyword_matches": len(score_data["matched_keywords"]),
-            "positive_indicators": len(score_data.get("positive_matches", [])),
-            "negative_indicators": len(score_data.get("negative_matches", []))
-        }
-    }
-
-# Twitter Integration Endpoints
-class TweetRequest(BaseModel):
-    article_id: int
-    custom_message: Optional[str] = None
-    include_hashtags: bool = True
-    use_premium: bool = True  # Default to premium for backward compatibility
-
-class TweetTextRequest(BaseModel):
-    text: str
-
-@app.get("/twitter/status")
-async def get_twitter_status():
-    """Check Twitter API configuration status"""
-    if not TWITTER_AVAILABLE:
-        return {
-            "configured": False,
-            "message": "Twitter service not available"
-        }
-    
-    is_configured = twitter_service.is_configured()
-    
-    if is_configured:
-        # Try to verify credentials
-        verification = twitter_service.verify_credentials()
-        return {
-            "configured": True,
-            "verified": verification.get('success', False),
-            "user_info": {
-                "username": verification.get('username'),
-                "name": verification.get('name')
-            } if verification.get('success') else None,
-            "message": verification.get('message')
-        }
-    else:
-        return {
-            "configured": False,
-            "message": "Twitter API credentials not set. Please configure environment variables."
-        }
-
-@app.post("/twitter/post")
-async def post_to_twitter(request: TweetRequest, db: Session = Depends(get_db)):
-    """Post an article to Twitter"""
-    if not TWITTER_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Twitter service not available")
-    
-    if not twitter_service.is_configured():
-        raise HTTPException(
-            status_code=400, 
-            detail="Twitter API not configured. Please set environment variables."
-        )
-    
-    # Get the article
-    article = db.query(Article).filter(Article.id == request.article_id).first()
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    
-    # Convert article to dict
-    article_dict = {
-        'id': article.id,
-        'title': article.title,
-        'url': article.url,
-        'content': article.content
-    }
-    
-    # Post to Twitter
-    result = twitter_service.post_article_to_twitter(
-        article=article_dict,
-        custom_message=request.custom_message,
-        include_hashtags=request.include_hashtags,
-        use_premium=request.use_premium
-    )
-    
-    if result['success']:
-        # Update the post record in database
-        post = Post(
-            article_id=article.id,
-            platform='twitter',
-            status='posted',
-            posted_at=datetime.utcnow(),
-            post_url=result.get('tweet_url'),
-            post_content=result.get('tweet_text', '')
-        )
-        db.add(post)
-        db.commit()
-        
-        return result
-    else:
-        raise HTTPException(status_code=500, detail=result.get('message', 'Failed to post tweet'))
-
-@app.post("/twitter/post-custom")
-async def post_custom_tweet(request: TweetTextRequest):
-    """Post custom text to Twitter"""
-    if not TWITTER_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Twitter service not available")
-    
-    if not twitter_service.is_configured():
-        raise HTTPException(
-            status_code=400,
-            detail="Twitter API not configured. Please set environment variables."
-        )
-    
-    # Post the custom tweet
-    result = twitter_service.post_tweet(text=request.text)
-    
-    if result['success']:
-        return result
-    else:
-        raise HTTPException(status_code=500, detail=result.get('message', 'Failed to post tweet'))
-
-@app.post("/twitter/preview")
-async def preview_tweet(request: TweetRequest, db: Session = Depends(get_db)):
-    """Preview how a tweet will look without posting - optimized for positive news"""
-    if not TWITTER_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Twitter service not available")
-    
-    # Get the article
-    article = db.query(Article).filter(Article.id == request.article_id).first()
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    
-    # Get article metadata from Haryana analysis if available
-    from haryana_config import calculate_relevance_score, is_haryana_relevant, HARYANA_FILTER_PRESETS
-    
-    # Calculate relevance and get metadata - detect best matching category
-    article_text = f"{article.title} {article.content}"
-    article_lower = article_text.lower()
-    
-    # Detect the best category based on article content
-    best_category = 'tourism'  # default
-    best_score = 0
-    
-    for category_key in HARYANA_FILTER_PRESETS.keys():
-        temp_analysis = calculate_relevance_score(article_text, category_key)
-        if temp_analysis['score'] > best_score:
-            best_score = temp_analysis['score']
-            best_category = category_key
-    
-    # Use the best matching category
-    analysis = calculate_relevance_score(article_text, best_category)
-    
-    # Convert article to dict with additional metadata for better tweet generation
-    article_dict = {
-        'id': article.id,
-        'title': article.title,
-        'url': article.url,
-        'content': article.content,
-        'sentiment': analysis.get('sentiment', 'positive'),
-        'matched_keywords': analysis.get('matched_keywords', []),
-        'positive_matches': analysis.get('positive_matches', [])
-    }
-    
-    # Generate engaging tweet text (use requested format)
-    max_length = 4000 if request.use_premium else 280
-    tweet_text = twitter_service.create_engaging_tweet(
-        article=article_dict,
-        custom_message=request.custom_message,
-        include_hashtags=request.include_hashtags,
-        max_length=max_length,
-        use_premium=request.use_premium
-    )
-    
-    return {
-        'tweet_text': tweet_text,
-        'character_count': len(tweet_text),
-        'article': {
-            'id': article.id,
-            'title': article.title,
-            'url': article.url
-        }
-    }
+@app.get("/scrape/status")
+async def get_scrape_status(db: Session = Depends(get_db)):
+    try:
+        total_articles = db.query(Article).count()
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        recent_articles = db.query(Article).filter(Article.crawled_at >= yesterday).count()
+        last_hour = datetime.utcnow() - timedelta(hours=1)
+        last_hour_articles = db.query(Article).filter(Article.crawled_at >= last_hour).count()
+        latest_article = db.query(Article).order_by(Article.crawled_at.desc()).first()
+        return {"total_articles": total_articles, "last_24h": recent_articles, "last_hour": last_hour_articles, "latest_article": {"title": latest_article.title if latest_article else None, "crawled_at": latest_article.crawled_at.isoformat() if latest_article else None} if latest_article else None, "active_sources": db.query(Source).filter(Source.is_active == True).count()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get scrape status: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
