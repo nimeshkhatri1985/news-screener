@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 const HaryanaNews: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string>('tourism');
   const [selectedSentiment, setSelectedSentiment] = useState<string>('positive');
-  const [minScore, setMinScore] = useState<number>(20);
+  const [minScore, setMinScore] = useState<number>(0);
   const [selectedArticle, setSelectedArticle] = useState<ArticleWithScore | null>(null);
   const [tweetModalArticle, setTweetModalArticle] = useState<ArticleWithScore | null>(null);
   const [tweetPreview, setTweetPreview] = useState<TweetPreview | null>(null);

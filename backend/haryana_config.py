@@ -332,3 +332,23 @@ def is_haryana_relevant(article_text):
             return True
     return False
 
+
+def is_article_positive(article_text):
+    """Check if article has positive sentiment (filters out negative and neutral news)"""
+    article_lower = article_text.lower()
+    negative_keywords = ['murder', 'killed', 'dead', 'death', 'suicide', 'rape', 'attack', 'assault', 'robbery', 'theft', 'scam', 'fraud', 'corrupt', 'corruption', 'arrest', 'jail', 'prison', 'gang', 'crime', 'violence', 'abuse', 'accident', 'fire', 'explosion', 'protest', 'strike', 'chaos', 'crisis', 'collapse', 'disaster', 'flood', 'drought', 'unemployment', 'loss', 'bankruptcy', 'debate', 'controversy', 'row', 'allegation', 'charges', 'lawsuit', 'cancelled', 'shut down', 'closed', 'failed', 'decline', 'decrease']
+    neutral_keywords = ['court', 'hc ', 'hc.', 'high court', 'judge', 'verdict', 'ruling', 'petition', 'plea', 'hearing', 'case', 'lawsuit', 'stay order', 'quash', 'quashed', 'sets aside', 'reinstates', 'approves', 'rejects', 'orders', 'directs', 'asks']
+    positive_keywords = ['launches', 'launched', 'announces', 'announced', 'inaugurates', 'develops', 'developing', 'growth', 'rises', 'increases', 'boosts', 'success', 'achievement', 'victory', 'wins', 'celebrates', 'new initiative', 'investment', 'partnership', 'expansion', 'improves', 'improving', 'renewable', 'green', 'innovation', 'record', 'milestone', 'pioneering', 'leading', 'excellence', 'upgrades', 'modernizes', 'facilities', 'infrastructure', 'project']
+    title = article_text.split('.')[0].split('\n')[0].lower()
+    title_negative_count = sum(1 for keyword in negative_keywords if keyword in title)
+    full_text_negative_count = sum(1 for keyword in negative_keywords if keyword in article_lower)
+    title_neutral_count = sum(1 for keyword in neutral_keywords if keyword in title)
+    title_positive_count = sum(1 for keyword in positive_keywords if keyword in title)
+    full_text_positive_count = sum(1 for keyword in positive_keywords if keyword in article_lower)
+    if title_negative_count >= 1 or full_text_negative_count >= 3:
+        return False
+    if title_positive_count >= 1 or full_text_positive_count >= 2:
+        return True
+    if title_neutral_count >= 1 and title_positive_count == 0:
+        return False
+    return False
