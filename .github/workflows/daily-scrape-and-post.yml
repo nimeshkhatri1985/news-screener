@@ -1,0 +1,62 @@
+name: Daily News Scraping and Twitter Posting
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC (adjust timezone as needed)
+    - cron: '0 2 * * *'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      filter_preset:
+        description: 'Filter preset (tourism, infrastructure, economy, etc.)'
+        required: false
+        default: 'tourism'
+      num_posts:
+        description: 'Number of posts to make'
+        required: false
+        default: '3'
+      min_score:
+        description: 'Minimum relevance score'
+        required: false
+        default: '50'
+
+jobs:
+  scrape-and-post:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Trigger News Scraping
+        run: |
+          echo "🔄 Triggering news scraping..."
+          curl -X POST ${{ secrets.BACKEND_URL }}/scrape/trigger \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.API_KEY }}"
+      
+      - name: Wait for Scraping to Complete
+        run: |
+          echo "⏳ Waiting 30 seconds for scraping to complete..."
+          sleep 30
+      
+      - name: Auto-Post Best Articles to Twitter
+        run: |
+          echo "🐦 Posting articles to Twitter..."
+          
+          # Get filter preset from workflow inputs or use default
+          FILTER_PRESET="${{ github.event.inputs.filter_preset || 'tourism' }}"
+          NUM_POSTS="${{ github.event.inputs.num_posts || '3' }}"
+          MIN_SCORE="${{ github.event.inputs.min_score || '50' }}"
+          
+          curl -X POST "${{ secrets.BACKEND_URL }}/haryana/auto-post?filter_preset=$FILTER_PRESET&num_posts=$NUM_POSTS&min_score=$MIN_SCORE" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.API_KEY }}"
+      
+      - name: Summary
+        run: |
+          echo "✅ Daily scraping and posting completed"
+          echo "📅 Time: $(date)"
+          echo "🔗 Backend URL: ${{ secrets.BACKEND_URL }}"
+

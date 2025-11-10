@@ -51,7 +51,7 @@ HARYANA_FILTER_PRESETS = {
             "destination", "attraction", "site", "tour", "travel", "experience"
         ],
         "positive_indicators": [
-            "inaugurate", "inaugurated", "launch", "launched", "unveil", "unveiled",
+            "inaugurate", "inaugurated", "unveil", "unveiled",
             "new", "develop", "developed", "development", "promote", "promoted",
             "boost", "boosted", "attract", "attracted", "improve", "improved",
             "enhance", "enhanced", "popular", "growing", "increase", "increased",
@@ -79,9 +79,9 @@ HARYANA_FILTER_PRESETS = {
             "corridor", "terminal", "station", "facility", "complex"
         ],
         "positive_indicators": [
-            "complete", "completed", "inaugurate", "inaugurated", "launch", "launched",
+            "complete", "completed", "inaugurate", "inaugurated",
             "approve", "approved", "sanction", "sanctioned", "fund", "funded",
-            "allocate", "allocated", "start", "started", "begin", "began",
+            "allocate", "allocated",
             "improve", "improved", "enhance", "enhanced", "upgrade", "upgraded",
             "modernize", "modernized", "expand", "expanded", "extend", "extended",
             "new", "state-of-the-art", "world-class", "cutting-edge", "advanced",
@@ -110,7 +110,7 @@ HARYANA_FILTER_PRESETS = {
         ],
         "positive_indicators": [
             "growth", "growing", "grow", "increase", "increased", "boost", "boosted",
-            "expand", "expanded", "expansion", "launch", "launched", "invest", "invested",
+            "expand", "expanded", "expansion", "invest", "invested",
             "create", "created", "generate", "generated", "attract", "attracted",
             "improve", "improved", "rise", "rising", "surge", "surged", "soar", "soared",
             "record", "record-breaking", "milestone", "achievement", "achieve", "achieved",
@@ -139,7 +139,7 @@ HARYANA_FILTER_PRESETS = {
             "vocational", "ITI", "polytechnic", "library", "laboratory"
         ],
         "positive_indicators": [
-            "inaugurate", "establish", "launch", "rank", "award", "excellence",
+            "inaugurate", "establish", "rank", "award", "excellence",
             "improve", "enhance", "upgrade", "new", "modern", "digital",
             "achieve", "success", "recognition", "accreditation"
         ],
@@ -177,7 +177,7 @@ HARYANA_FILTER_PRESETS = {
         ],
         "positive_indicators": [
             "win", "medal", "gold", "silver", "bronze", "victory", "champion",
-            "inaugurate", "launch", "new", "modern", "world-class", "achieve",
+            "inaugurate", "new", "modern", "world-class", "achieve",
             "record", "milestone", "excellence", "recognition"
         ],
         "negative_indicators": [
@@ -196,7 +196,7 @@ HARYANA_FILTER_PRESETS = {
         ],
         "positive_indicators": [
             "improve", "clean", "reduce", "plant", "protect", "conserve",
-            "launch", "initiative", "green", "sustainable", "renewable",
+            "initiative", "green", "sustainable", "renewable",
             "award", "recognition", "achieve", "better", "enhance"
         ],
         "negative_indicators": [
@@ -210,10 +210,10 @@ HARYANA_FILTER_PRESETS = {
             "government", "governance", "policy", "scheme", "initiative", "program",
             "service", "administration", "public", "welfare", "benefit", "portal",
             "digital", "e-governance", "online", "minister", "CM", "announcement",
-            "launch", "reform", "transparency", "accountability", "citizen"
+            "reform", "transparency", "accountability", "citizen"
         ],
         "positive_indicators": [
-            "launch", "introduce", "improve", "enhance", "benefit", "welfare",
+            "introduce", "improve", "enhance", "benefit", "welfare",
             "efficient", "transparent", "digital", "online", "easy", "quick",
             "accessible", "innovative", "modern", "award", "recognition"
         ],
@@ -235,9 +235,9 @@ HARYANA_LOCATIONS = [
 # HEAVILY penalize negative content to show ONLY positive progress news
 SENTIMENT_WEIGHTS = {
     "positive_indicator": 3.0,      # Increased from 2.0
-    "negative_indicator": -10.0,    # Increased penalty from -2.0 to -10.0
+    "negative_indicator": -20.0,    # Strong penalty so any negative indicator dominates
     "positive_context": 1.5,        # Increased from 1.0
-    "negative_context": -5.0,       # Increased penalty from -1.0
+    "negative_context": -8.0,       # Heavier penalty for negative context mentions
     "neutral": 0.0
 }
 
@@ -308,7 +308,7 @@ def calculate_relevance_score(article_text, filter_preset_key):
     
     # Additional filter: If article has ANY negative indicators, heavily penalize
     if len(negative_matches) > 0:
-        total_score -= (len(negative_matches) * 30)
+        total_score -= (len(negative_matches) * 60)
     
     # Bonus for multiple positive indicators
     if len(positive_matches) >= 3:
@@ -338,7 +338,7 @@ def is_article_positive(article_text):
     article_lower = article_text.lower()
     negative_keywords = ['murder', 'killed', 'dead', 'death', 'suicide', 'rape', 'attack', 'assault', 'robbery', 'theft', 'scam', 'fraud', 'corrupt', 'corruption', 'arrest', 'jail', 'prison', 'gang', 'crime', 'violence', 'abuse', 'accident', 'fire', 'explosion', 'protest', 'strike', 'chaos', 'crisis', 'collapse', 'disaster', 'flood', 'drought', 'unemployment', 'loss', 'bankruptcy', 'debate', 'controversy', 'row', 'allegation', 'charges', 'lawsuit', 'cancelled', 'shut down', 'closed', 'failed', 'decline', 'decrease']
     neutral_keywords = ['court', 'hc ', 'hc.', 'high court', 'judge', 'verdict', 'ruling', 'petition', 'plea', 'hearing', 'case', 'lawsuit', 'stay order', 'quash', 'quashed', 'sets aside', 'reinstates', 'approves', 'rejects', 'orders', 'directs', 'asks']
-    positive_keywords = ['launches', 'launched', 'announces', 'announced', 'inaugurates', 'develops', 'developing', 'growth', 'rises', 'increases', 'boosts', 'success', 'achievement', 'victory', 'wins', 'celebrates', 'new initiative', 'investment', 'partnership', 'expansion', 'improves', 'improving', 'renewable', 'green', 'innovation', 'record', 'milestone', 'pioneering', 'leading', 'excellence', 'upgrades', 'modernizes', 'facilities', 'infrastructure', 'project']
+    positive_keywords = ['announces', 'announced', 'inaugurates', 'develops', 'developing', 'growth', 'rises', 'increases', 'boosts', 'success', 'achievement', 'victory', 'wins', 'celebrates', 'new initiative', 'investment', 'partnership', 'expansion', 'improves', 'improving', 'renewable', 'green', 'innovation', 'record', 'milestone', 'pioneering', 'leading', 'excellence', 'upgrades', 'modernizes', 'facilities', 'infrastructure', 'project']
     title = article_text.split('.')[0].split('\n')[0].lower()
     title_negative_count = sum(1 for keyword in negative_keywords if keyword in title)
     full_text_negative_count = sum(1 for keyword in negative_keywords if keyword in article_lower)
