@@ -199,7 +199,7 @@ export const getHaryanaFilterPresets = async (): Promise<Record<string, HaryanaF
 };
 
 export const getHaryanaArticles = async (params: {
-  filter_preset: string;
+  filter_preset?: string;
   source_id?: number;
   sentiment?: string;
   min_score?: number;

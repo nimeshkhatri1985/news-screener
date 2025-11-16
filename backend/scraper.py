@@ -9,11 +9,92 @@ from typing import List, Dict
 import re
 
 from main import Article, Source, SessionLocal
+from haryana_config import (
+    HARYANA_FILTER_PRESETS,
+    HARYANA_LOCATIONS,
+    calculate_relevance_score,
+    is_haryana_relevant,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class NewsScraper:
+    HIGH_IMPACT_KEYWORDS = [
+        "investment",
+        "invests",
+        "invest",
+        "crore",
+        "lakh",
+        "jobs",
+        "employment",
+        "employed",
+        "startup",
+        "funding",
+        "scheme",
+        "benefit",
+        "benefits",
+        "beneficiaries",
+        "subsidy",
+        "loan waiver",
+        "incentive",
+        "plant",
+        "factory",
+        "manufacturing",
+        "production",
+        "inaugur",
+        "launch",
+        "portal",
+        "app",
+        "hospital",
+        "school",
+        "college",
+        "university",
+        "training",
+        "skill",
+        "renewable",
+        "solar",
+        "wind",
+        "metro",
+        "highway",
+        "expressway",
+        "airport",
+        "rail",
+        "power",
+        "electric",
+        "smart city",
+        "development",
+        "water supply",
+        "sanitation",
+        "medal",
+        "gold",
+        "champion",
+        "record",
+        "award",
+        "recognition",
+        "startup hub",
+        "msme",
+        "cluster",
+        "infra",
+        "infrastructure",
+        "loan",
+        "credit",
+        "women",
+        "youth",
+        "entrepreneur",
+        "innovation",
+        "skill centre",
+        "cow shed",
+        "dairy",
+        "irrigation",
+        "canal",
+        "clean energy",
+        "biogas",
+        "electric bus",
+        "manufacturing unit",
+        "industrial park",
+    ]
+
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
@@ -26,7 +107,7 @@ class NewsScraper:
             logger.info(f"Scraping RSS feed: {rss_url}")
             feed = feedparser.parse(rss_url)
             
-            articles = []
+            scored_articles = []
             for entry in feed.entries:
                 article_data = {
                     'source_id': source_id,
@@ -35,10 +116,35 @@ class NewsScraper:
                     'published_at': self._parse_date(entry.get('published', '')),
                     'content': self._extract_content(entry)
                 }
-                articles.append(article_data)
+                positivity_score = self._calculate_positivity_score(
+                    article_data.get('title', ''),
+                    article_data.get('content', '')
+                )
+                scored_articles.append((positivity_score, article_data))
             
-            logger.info(f"Found {len(articles)} articles from {rss_url}")
-            return articles
+            logger.info(f"Found {len(scored_articles)} articles from {rss_url}")
+            
+            # Sort by positivity score first, then by newest publish date
+            scored_articles.sort(
+                key=lambda item: (
+                    item[0],
+                    item[1].get('published_at') or datetime.utcnow()
+                ),
+                reverse=True
+            )
+            
+            positive_articles = [
+                item[1] for item in scored_articles
+                if item[0] is not None and item[0] > float('-inf')
+            ]
+            
+            if not positive_articles:
+                logger.info(f"No clearly positive articles found for source {source_id}; skipping.")
+                return []
+            
+            limited_articles = positive_articles[:3]
+            logger.info(f"Limiting to top {len(limited_articles)} positive articles for source {source_id}")
+            return limited_articles
             
         except Exception as e:
             logger.error(f"Error scraping RSS feed {rss_url}: {str(e)}")
@@ -133,6 +239,20 @@ class NewsScraper:
                 existing = db.query(Article).filter(Article.url == article_data['url']).first()
                 if existing:
                     continue
+
+                # Ensure Haryana relevance (title/content)
+                article_text = f"{article_data.get('title', '')} {article_data.get('content', '')}"
+                if not is_haryana_relevant(article_text):
+                    # Try fetching full article content once before skipping
+                    full_content = self.scrape_article_content(article_data['url'])
+                    if full_content:
+                        article_data['content'] = full_content
+                        article_text = f"{article_data.get('title', '')} {full_content}"
+                    if not is_haryana_relevant(article_text):
+                        continue
+                
+                if not self._is_primary_haryana_story(article_data.get('title', ''), article_text):
+                    continue
                 
                 # Create new article
                 article = Article(**article_data)
@@ -175,6 +295,70 @@ class NewsScraper:
             db.close()
         
         return total_saved
+
+    def _calculate_positivity_score(self, title: str, content: str) -> float:
+        """Calculate a positivity-oriented score using all Haryana presets"""
+        article_text = f"{title} {content or ''}"
+        best_positive: tuple[float, dict] | None = None
+        
+        for preset_key in HARYANA_FILTER_PRESETS.keys():
+            result = calculate_relevance_score(article_text, preset_key)
+            score = result.get('score', 0)
+            sentiment = result.get('sentiment')
+            
+            if sentiment == "positive":
+                if best_positive is None or score > best_positive[0]:
+                    best_positive = (score, result)
+        
+        if not best_positive:
+            return float('-inf')
+        
+        score, result = best_positive
+        positive_matches = result.get("positive_matches", [])
+        negative_matches = result.get("negative_matches", [])
+        
+        if negative_matches:
+            return float('-inf')
+        
+        # Require at least two positive indicators or a very high score
+        if len(positive_matches) < 2 and score < 140:
+            return float('-inf')
+        
+        if score < 100:
+            return float('-inf')
+        
+        if not self._has_high_impact_indicator(article_text):
+            return float('-inf')
+        
+        return score
+
+    def _has_high_impact_indicator(self, text: str) -> bool:
+        text_lower = text.lower()
+        for keyword in self.HIGH_IMPACT_KEYWORDS:
+            if keyword in text_lower:
+                return True
+        if re.search(r"(₹|rs\.?\s?\d|inr\.?\s?\d|\d+\s?(crore|lakhs?|jobs|families|beneficiaries|students|mw|km|units|villages|districts))", text_lower):
+            return True
+        return False
+
+    def _is_primary_haryana_story(self, title: str, full_text: str) -> bool:
+        """Ensure Haryana mention is central, not incidental"""
+        title_lower = title.lower()
+        text_lower = full_text.lower()
+        location_hits = 0
+        for location in HARYANA_LOCATIONS:
+            loc = location.lower()
+            if loc in title_lower:
+                return True
+            count = text_lower.count(loc)
+            location_hits += count
+            if count > 1:
+                return True
+        first_chunk = text_lower[:200]
+        for location in HARYANA_LOCATIONS:
+            if location.lower() in first_chunk:
+                return True
+        return False
 
 def main():
     """Main function for testing"""

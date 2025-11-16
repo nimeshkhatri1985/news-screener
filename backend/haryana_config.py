@@ -44,14 +44,15 @@ HARYANA_FILTER_PRESETS = {
         "description": "Positive news about tourism development, heritage sites, cultural events",
         "keywords": [
             "tourism", "tourist", "heritage", "monument", "temple", "fort",
-            "cultural", "festival", "museum", "archaeological", "surajkund",
-            "kurukshetra", "panchkula", "morni hills", "sultanpur", "bird sanctuary",
-            "kingdom of dreams", "damdama lake", "vintage car museum", "craft mela",
+            "cultural", "festival", "museum", "archaeological",
+            # Removed location names - they should only be used for Haryana relevance, not category matching
+            # "surajkund", "kurukshetra", "panchkula", "morni hills", "sultanpur",
+            "bird sanctuary", "kingdom of dreams", "damdama lake", "vintage car museum", "craft mela",
             "adventure", "hotel", "resort", "pilgrim", "pilgrimage", "visitor",
             "destination", "attraction", "site", "tour", "travel", "experience"
         ],
         "positive_indicators": [
-            "inaugurate", "inaugurated", "unveil", "unveiled",
+            "inaugurate", "inaugurated", "launch", "launched", "unveil", "unveiled",
             "new", "develop", "developed", "development", "promote", "promoted",
             "boost", "boosted", "attract", "attracted", "improve", "improved",
             "enhance", "enhanced", "popular", "growing", "increase", "increased",
@@ -76,12 +77,15 @@ HARYANA_FILTER_PRESETS = {
             "expressway", "smart city", "urban", "rural", "water supply",
             "electricity", "power", "sewage", "drainage", "public transport",
             "bus", "connectivity", "network", "modernization", "upgrade",
-            "corridor", "terminal", "station", "facility", "complex"
+            "corridor", "terminal", "station",
+            # Removed generic "facility" - use specific terms instead
+            "infrastructure facility", "transport facility", "public facility",
+            "complex"
         ],
         "positive_indicators": [
-            "complete", "completed", "inaugurate", "inaugurated",
+            "complete", "completed", "inaugurate", "inaugurated", "launch", "launched",
             "approve", "approved", "sanction", "sanctioned", "fund", "funded",
-            "allocate", "allocated",
+            "allocate", "allocated", "start", "started", "begin", "began",
             "improve", "improved", "enhance", "enhanced", "upgrade", "upgraded",
             "modernize", "modernized", "expand", "expanded", "extend", "extended",
             "new", "state-of-the-art", "world-class", "cutting-edge", "advanced",
@@ -110,9 +114,10 @@ HARYANA_FILTER_PRESETS = {
         ],
         "positive_indicators": [
             "growth", "growing", "grow", "increase", "increased", "boost", "boosted",
-            "expand", "expanded", "expansion", "invest", "invested",
+            "expand", "expanded", "expansion", "launch", "launched", "invest", "invested",
             "create", "created", "generate", "generated", "attract", "attracted",
-            "improve", "improved", "rise", "rising", "surge", "surged", "soar", "soared",
+            "improve", "improved", "rise", "rising", "raises", "raised", "raise",
+            "surge", "surged", "soar", "soared",
             "record", "record-breaking", "milestone", "achievement", "achieve", "achieved",
             "success", "successful", "profitable", "profit", "revenue", "thriving",
             "flourishing", "prosperous", "prosperity", "boom", "booming", "robust",
@@ -139,7 +144,7 @@ HARYANA_FILTER_PRESETS = {
             "vocational", "ITI", "polytechnic", "library", "laboratory"
         ],
         "positive_indicators": [
-            "inaugurate", "establish", "rank", "award", "excellence",
+            "inaugurate", "establish", "launch", "rank", "award", "excellence",
             "improve", "enhance", "upgrade", "new", "modern", "digital",
             "achieve", "success", "recognition", "accreditation"
         ],
@@ -173,11 +178,12 @@ HARYANA_FILTER_PRESETS = {
             "sport", "sports", "athlete", "medal", "olympic", "championship",
             "stadium", "tournament", "cricket", "hockey", "wrestling", "boxing",
             "kabaddi", "football", "badminton", "shooting", "fitness", "gym",
-            "training", "coach", "player", "facility", "academy", "infrastructure"
+            "training", "coach", "player", "sports facility", "sports academy",
+            "sports complex", "sports infrastructure", "sports center", "sports centre"
         ],
         "positive_indicators": [
             "win", "medal", "gold", "silver", "bronze", "victory", "champion",
-            "inaugurate", "new", "modern", "world-class", "achieve",
+            "inaugurate", "launch", "new", "modern", "world-class", "achieve",
             "record", "milestone", "excellence", "recognition"
         ],
         "negative_indicators": [
@@ -196,7 +202,7 @@ HARYANA_FILTER_PRESETS = {
         ],
         "positive_indicators": [
             "improve", "clean", "reduce", "plant", "protect", "conserve",
-            "initiative", "green", "sustainable", "renewable",
+            "launch", "initiative", "green", "sustainable", "renewable",
             "award", "recognition", "achieve", "better", "enhance"
         ],
         "negative_indicators": [
@@ -210,10 +216,10 @@ HARYANA_FILTER_PRESETS = {
             "government", "governance", "policy", "scheme", "initiative", "program",
             "service", "administration", "public", "welfare", "benefit", "portal",
             "digital", "e-governance", "online", "minister", "CM", "announcement",
-            "reform", "transparency", "accountability", "citizen"
+            "launch", "reform", "transparency", "accountability", "citizen"
         ],
         "positive_indicators": [
-            "introduce", "improve", "enhance", "benefit", "welfare",
+            "launch", "introduce", "improve", "enhance", "benefit", "welfare",
             "efficient", "transparent", "digital", "online", "easy", "quick",
             "accessible", "innovative", "modern", "award", "recognition"
         ],
@@ -223,21 +229,90 @@ HARYANA_FILTER_PRESETS = {
     }
 }
 
-# Cities and regions in Haryana for location-based filtering
+# Cities, districts, and regions in Haryana for location-based filtering
+# English-only list (state, all districts, major towns, regions, and key landmarks)
 HARYANA_LOCATIONS = [
-    "Haryana", "Chandigarh", "Gurugram", "Gurgaon", "Faridabad", "Panchkula",
-    "Ambala", "Karnal", "Panipat", "Rohtak", "Hisar", "Sonipat", "Yamunanagar",
-    "Kurukshetra", "Sirsa", "Bhiwani", "Jind", "Kaithal", "Rewari", "Mahendragarh",
-    "Palwal", "Jhajjar", "Fatehabad", "Nuh", "Mewat"
+    # State name
+    "Haryana",
+
+    # All 22 Districts (English)
+    "Ambala",
+    "Bhiwani",
+    "Charkhi Dadri",
+    "Faridabad",
+    "Fatehabad",
+    "Gurugram", "Gurgaon",
+    "Hisar",
+    "Jhajjar",
+    "Jind",
+    "Kaithal",
+    "Karnal",
+    "Kurukshetra",
+    "Mahendragarh",
+    "Nuh",
+    "Palwal",
+    "Panchkula",
+    "Panipat",
+    "Rewari",
+    "Rohtak",
+    "Sirsa",
+    "Sonipat",
+    "Yamunanagar",
+
+    # Major Cities and Towns (English)
+    "Chandigarh",
+    "Manesar",
+    "Sohna",
+    "Bahadurgarh",
+    "Bawal",
+    "Dharuhera",
+    "Hansi",
+    "Narnaul",
+    "Tohana",
+    "Narwana",
+    "Ellenabad",
+    "Barwala",
+    "Ratia",
+    "Ladwa",
+    "Shahbad",
+    "Pehowa",
+    "Pundri",
+    "Nilokheri",
+    "Indri",
+    "Gharaunda",
+    "Assandh",
+    "Samalkha",
+    "Gohana",
+    "Ganaur",
+    "Kharkhoda",
+    "Rai",
+    "Murthal",
+    "Kundli",
+    "Badshahpur",
+
+    # Regions and Areas
+    "Mewat",
+    "Ahirwal",
+    "Bagri",
+    "Haryanvi",
+
+    # Important Landmarks/Areas (that indicate Haryana)
+    "Surajkund",
+    "Damdama Lake",
+    "Sultanpur",
+    "Pinjore",
+    "Kalesar",
+    "Morni Hills",
+    "Brahma Sarovar"
 ]
 
 # Sentiment scoring weights
 # HEAVILY penalize negative content to show ONLY positive progress news
 SENTIMENT_WEIGHTS = {
     "positive_indicator": 3.0,      # Increased from 2.0
-    "negative_indicator": -20.0,    # Strong penalty so any negative indicator dominates
+    "negative_indicator": -10.0,    # Increased penalty from -2.0 to -10.0
     "positive_context": 1.5,        # Increased from 1.0
-    "negative_context": -8.0,       # Heavier penalty for negative context mentions
+    "negative_context": -5.0,       # Increased penalty from -1.0
     "neutral": 0.0
 }
 
@@ -255,8 +330,45 @@ def calculate_relevance_score(article_text, filter_preset_key):
     if filter_preset_key not in HARYANA_FILTER_PRESETS:
         return {"score": 0, "matched_keywords": [], "sentiment": "neutral"}
     
-    preset = HARYANA_FILTER_PRESETS[filter_preset_key]
+    # CRITICAL FIX: Filter out violent/crime articles immediately - BEFORE any category matching
+    # These should NEVER appear in ANY category, regardless of keywords
+    violent_keywords = [
+        "kill", "kills", "killed", "killing", "murder", "murdered", "murderer",
+        "assault", "violence", "violent", "attack", "attacked", "arrest", "arrested",
+        "crime", "criminal", "throat", "slitting", "stab", "stabbing", "shoot",
+        "shooting", "dead", "death", "died", "dies", "suicide", "rape", "raped",
+        "robbery", "theft", "burglary", "abuse", "abused", "victim", "victims",
+        "homicide", "manslaughter", "assassination", "terrorism", "terrorist",
+        "bomb", "explosion", "explosive", "weapon", "weapons", "gun", "guns"
+    ]
+    
     article_lower = article_text.lower()
+    title = article_text.split('.')[0].split('\n')[0].lower()  # First sentence or first line
+    
+    # Check for violent keywords in title (most reliable indicator)
+    for violent_kw in violent_keywords:
+        if violent_kw in title:
+            return {
+                "score": -10000,  # Massive penalty to ensure it's completely filtered out
+                "matched_keywords": [],
+                "positive_matches": [],
+                "negative_matches": [violent_kw],
+                "sentiment": "negative"
+            }
+    
+    # Also check first 300 chars of content for violent keywords (to catch violent news)
+    content_start = article_lower[:300]
+    violent_matches_in_content = [kw for kw in violent_keywords if kw in content_start]
+    if len(violent_matches_in_content) >= 2:  # Multiple violent keywords = likely violent news
+        return {
+            "score": -10000,
+            "matched_keywords": [],
+            "positive_matches": [],
+            "negative_matches": violent_matches_in_content[:3],  # Return first 3 matches
+            "sentiment": "negative"
+        }
+    
+    preset = HARYANA_FILTER_PRESETS[filter_preset_key]
     
     # Check for keywords
     matched_keywords = []
@@ -264,10 +376,38 @@ def calculate_relevance_score(article_text, filter_preset_key):
         if keyword.lower() in article_lower:
             matched_keywords.append(keyword)
     
-    # Base score from keyword matches
+    # CRITICAL FIX: Require at least one keyword match before applying positive indicators
+    # This prevents generic positive words from scoring articles in wrong categories
+    if len(matched_keywords) == 0:
+        # No keywords matched - article is not relevant to this category
+        # Only apply negative penalties (to filter out clearly negative content)
+        negative_matches = []
+        for indicator in preset["negative_indicators"]:
+            if indicator.lower() in article_lower:
+                negative_matches.append(indicator)
+        
+        if len(negative_matches) > 0:
+            return {
+                "score": -100,
+                "matched_keywords": [],
+                "positive_matches": [],
+                "negative_matches": negative_matches,
+                "sentiment": "negative"
+            }
+        else:
+            # No keywords, no negative indicators - not relevant to this category
+            return {
+                "score": 0,
+                "matched_keywords": [],
+                "positive_matches": [],
+                "negative_matches": [],
+                "sentiment": "neutral"
+            }
+    
+    # Base score from keyword matches (only reached if keywords matched)
     keyword_score = len(matched_keywords) * 10
     
-    # Check for positive indicators
+    # Check for positive indicators (only if keywords matched)
     positive_matches = []
     for indicator in preset["positive_indicators"]:
         if indicator.lower() in article_lower:
@@ -294,7 +434,7 @@ def calculate_relevance_score(article_text, filter_preset_key):
     else:
         sentiment = "neutral"
     
-    # Total score calculation
+    # Total score calculation (only reached if keywords matched)
     # HEAVILY penalize negative and neutral content
     if sentiment == "negative":
         # Negative articles get massive penalty - essentially filtered out
@@ -303,14 +443,14 @@ def calculate_relevance_score(article_text, filter_preset_key):
         # Neutral articles get moderate penalty to prioritize positive news
         total_score = keyword_score + (sentiment_score * 5) - 20
     else:  # positive
-        # Positive articles get bonus
+        # Positive articles get bonus (only if keywords matched)
         total_score = keyword_score + (sentiment_score * 8) + 20
     
     # Additional filter: If article has ANY negative indicators, heavily penalize
     if len(negative_matches) > 0:
-        total_score -= (len(negative_matches) * 60)
+        total_score -= (len(negative_matches) * 30)
     
-    # Bonus for multiple positive indicators
+    # Bonus for multiple positive indicators (only if keywords matched)
     if len(positive_matches) >= 3:
         total_score += 25
     

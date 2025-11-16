@@ -1,19 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import api, { ArticleWithScore, HaryanaFilterPreset, TweetPreview } from '../services/api';
+import api, { ArticleWithScore, TweetPreview } from '../services/api';
 import { 
-  FunnelIcon, 
   SparklesIcon,
   ArrowTopRightOnSquareIcon,
-  BuildingOfficeIcon,
-  AcademicCapIcon,
-  CurrencyDollarIcon,
-  TruckIcon,
-  TrophyIcon,
-  GlobeAltIcon,
-  CheckBadgeIcon,
   XMarkIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  CheckBadgeIcon
 } from '@heroicons/react/24/outline';
 import { 
   ChatBubbleLeftRightIcon as TwitterIcon 
@@ -21,8 +14,7 @@ import {
 import { format } from 'date-fns';
 
 const HaryanaNews: React.FC = () => {
-  const [selectedPreset, setSelectedPreset] = useState<string>('tourism');
-  const [selectedSentiment, setSelectedSentiment] = useState<string>('positive');
+  const [selectedSentiment, setSelectedSentiment] = useState<string>('');
   const [minScore, setMinScore] = useState<number>(0);
   const [selectedArticle, setSelectedArticle] = useState<ArticleWithScore | null>(null);
   const [tweetModalArticle, setTweetModalArticle] = useState<ArticleWithScore | null>(null);
@@ -35,20 +27,13 @@ const HaryanaNews: React.FC = () => {
   const [scrapeSuccess, setScrapeSuccess] = useState<string>('');
   const [scrapeError, setScrapeError] = useState<string>('');
 
-  const { data: presets, isLoading: presetsLoading } = useQuery({
-    queryKey: ['haryana-presets'],
-    queryFn: api.getHaryanaFilterPresets
-  });
-
   const { data: articles, isLoading: articlesLoading } = useQuery({
-    queryKey: ['haryana-articles', selectedPreset, selectedSentiment, minScore],
+    queryKey: ['haryana-articles', selectedSentiment, minScore],
     queryFn: () => api.getHaryanaArticles({
-      filter_preset: selectedPreset,
       sentiment: selectedSentiment || undefined,
       min_score: minScore,
-      limit: 100
-    }),
-    enabled: !!selectedPreset
+      limit: 200
+    })
   });
 
   const { data: twitterStatus } = useQuery({
@@ -148,20 +133,6 @@ const HaryanaNews: React.FC = () => {
     }
   };
 
-  const getPresetIcon = (key: string) => {
-    const icons: Record<string, any> = {
-      tourism: GlobeAltIcon,
-      infrastructure: BuildingOfficeIcon,
-      economy: CurrencyDollarIcon,
-      education: AcademicCapIcon,
-      agriculture: TruckIcon,
-      sports: TrophyIcon,
-      environment: SparklesIcon,
-      governance: CheckBadgeIcon
-    };
-    return icons[key] || FunnelIcon;
-  };
-
   const getSentimentBadge = (sentiment?: string) => {
     if (!sentiment) return null;
     
@@ -226,42 +197,6 @@ const HaryanaNews: React.FC = () => {
       </div>
 
       <div className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select News Category</h2>
-        {presetsLoading ? (
-          <div className="text-center py-4">Loading categories...</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {presets && (Object.entries(presets) as [string, HaryanaFilterPreset][]).map(([key, preset]) => {
-              const Icon = getPresetIcon(key);
-              const isSelected = selectedPreset === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setSelectedPreset(key)}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <Icon className={`h-6 w-6 mr-3 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
-                    <div className="flex-1">
-                      <h3 className={`font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
-                        {preset.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">{preset.description}</p>
-                      <p className="text-xs text-gray-500 mt-2">{preset.keyword_count} keywords</p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="card p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Refine Results</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -309,16 +244,11 @@ const HaryanaNews: React.FC = () => {
 
       {articles && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <SparklesIcon className="h-5 w-5 text-blue-600 mr-2" />
-              <span className="font-medium text-blue-900">
-                {articles.length} relevant articles found
-              </span>
-            </div>
-            <div className="text-sm text-blue-700">
-              Category: {presets?.[selectedPreset]?.name || selectedPreset}
-            </div>
+          <div className="flex items-center">
+            <SparklesIcon className="h-5 w-5 text-blue-600 mr-2" />
+            <span className="font-medium text-blue-900">
+              {articles.length} articles found (sorted by score: high to low)
+            </span>
           </div>
         </div>
       )}
@@ -357,6 +287,14 @@ const HaryanaNews: React.FC = () => {
                       <SparklesIcon className="h-4 w-4 mr-1" />
                       <span className="font-medium">Score: {article.relevance_score}</span>
                     </div>
+                    
+                    {(article as any).category && (
+                      <div className="flex items-center text-purple-600">
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                          {(article as any).category}
+                        </span>
+                      </div>
+                    )}
                     
                     {article.matched_keywords && article.matched_keywords.length > 0 && (
                       <div className="flex items-center text-gray-600">
@@ -412,7 +350,7 @@ const HaryanaNews: React.FC = () => {
             <div className="text-center py-8 text-gray-500">
               <SparklesIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
               <p>No articles found matching your criteria.</p>
-              <p className="text-sm mt-2">Try adjusting your filters or selecting a different category.</p>
+              <p className="text-sm mt-2">Try adjusting your filters.</p>
             </div>
           )}
         </div>
@@ -458,7 +396,7 @@ const HaryanaNews: React.FC = () => {
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-900 mb-2">Matched Keywords</h3>
                   <div className="flex flex-wrap gap-2">
-                    {selectedArticle.matched_keywords.map((keyword, idx) => (
+                    {selectedArticle.matched_keywords.map((keyword: string, idx: number) => (
                       <span
                         key={idx}
                         className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
@@ -515,7 +453,7 @@ const HaryanaNews: React.FC = () => {
                 </button>
               </div>
 
-              {twitterStatus && !twitterStatus.configured && (
+              {twitterStatus && !(twitterStatus as any).configured && (
                 <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-yellow-800 text-sm">
                     ⚠️ Twitter API not configured. See TWITTER_SETUP_GUIDE.md for setup instructions.
@@ -648,7 +586,7 @@ const HaryanaNews: React.FC = () => {
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={handlePostToTwitter}
-                  disabled={postMutation.isPending || !twitterStatus?.configured || !!tweetSuccess}
+                  disabled={postMutation.isPending || !(twitterStatus as any)?.configured || !!tweetSuccess}
                   className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TwitterIcon className="h-4 w-4 mr-2" />

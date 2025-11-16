@@ -210,28 +210,80 @@ if HARYANA_CONFIG_AVAILABLE:
         for key, config in HARYANA_FILTER_PRESETS.items():
             presets[key] = {"name": config["name"], "description": config["description"], "keyword_count": len(config["keywords"])}
         return presets
-    
+
     @app.get("/haryana/articles")
-    async def get_haryana_articles(filter_preset: str, source_id: Optional[int] = None, sentiment: Optional[str] = None, min_score: int = 0, limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
-        if filter_preset not in HARYANA_FILTER_PRESETS:
+    async def get_haryana_articles(filter_preset: Optional[str] = None, source_id: Optional[int] = None, sentiment: Optional[str] = None, min_score: int = 0, limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
+        # If filter_preset is provided, validate it
+        if filter_preset and filter_preset not in HARYANA_FILTER_PRESETS:
             raise HTTPException(status_code=400, detail=f"Invalid filter preset: {filter_preset}")
+        
         query = db.query(Article)
         if source_id:
             query = query.filter(Article.source_id == source_id)
         articles = query.order_by(Article.published_at.desc()).limit(limit * 3).all()
+
         scored_articles = []
+        
         for article in articles:
             article_text = f"{article.title} {article.content}"
             if not is_haryana_relevant(article_text):
                 continue
-            result = calculate_relevance_score(article_text, filter_preset)
-            relevance_score = result.get("score", result.get("relevance_score", 0))
+            
+            # If filter_preset is provided, use it; otherwise score against all categories and use best
+            if filter_preset:
+                result = calculate_relevance_score(article_text, filter_preset)
+                relevance_score = result.get("score", result.get("relevance_score", 0))
+                best_category = filter_preset
+                matched_keywords = result.get("matched_keywords", [])
+                article_sentiment = result.get("sentiment", "neutral")
+                positive_matches = result.get("positive_matches", [])
+                negative_matches = result.get("negative_matches", [])
+            else:
+                # Score against all categories and use the best score
+                best_score = -float('inf')
+                best_result = None
+                best_category = None
+                
+                for category_key in HARYANA_FILTER_PRESETS.keys():
+                    result = calculate_relevance_score(article_text, category_key)
+                    score = result.get("score", result.get("relevance_score", 0))
+                    if score > best_score:
+                        best_score = score
+                        best_result = result
+                        best_category = category_key
+                
+                if best_result is None or best_score < min_score:
+                    continue
+                
+                relevance_score = best_score
+                matched_keywords = best_result.get("matched_keywords", [])
+                article_sentiment = best_result.get("sentiment", "neutral")
+                positive_matches = best_result.get("positive_matches", [])
+                negative_matches = best_result.get("negative_matches", [])
+
             if relevance_score < min_score:
                 continue
-            if sentiment and result["sentiment"] != sentiment:
+            if sentiment and article_sentiment != sentiment:
                 continue
-            article_dict = {"id": article.id, "source_id": article.source_id, "title": article.title, "content": article.content, "url": article.url, "published_at": article.published_at.isoformat(), "crawled_at": article.crawled_at.isoformat(), "relevance_score": relevance_score, "matched_keywords": result["matched_keywords"], "sentiment": result["sentiment"], "positive_matches": result.get("positive_matches", []), "negative_matches": result.get("negative_matches", [])}
+            
+            article_dict = {
+                "id": article.id,
+                "source_id": article.source_id,
+                "title": article.title,
+                "content": article.content,
+                "url": article.url,
+                "published_at": article.published_at.isoformat(),
+                "crawled_at": article.crawled_at.isoformat(),
+                "relevance_score": relevance_score,
+                "matched_keywords": matched_keywords,
+                "sentiment": article_sentiment,
+                "positive_matches": positive_matches,
+                "negative_matches": negative_matches,
+                "category": best_category  # Add category info
+            }
             scored_articles.append(article_dict)
+        
+        # Sort by score descending (high to low)
         scored_articles.sort(key=lambda x: x["relevance_score"], reverse=True)
         return scored_articles[:limit]
     
