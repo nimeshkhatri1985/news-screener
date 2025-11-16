@@ -9,7 +9,11 @@ from typing import List, Optional, Dict
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Safely load environment variables from .env without crashing if file permissions are restricted
+try:
+    load_dotenv()
+except PermissionError as e:
+    print(f"⚠️  Warning: could not load .env file due to permissions: {e}")
 
 try:
     from haryana_config import HARYANA_FILTER_PRESETS, calculate_relevance_score, is_haryana_relevant

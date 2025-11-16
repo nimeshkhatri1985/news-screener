@@ -354,30 +354,15 @@ class TwitterService:
             matched_keywords = article.get('matched_keywords', [])
             matched_keywords_lower = [kw.lower() for kw in matched_keywords]
             
-            # Check for tourism-related keywords
-            if any(any(term in kw for term in ['tourism', 'heritage', 'tourist', 'monument', 'temple', 'fort', 'festival']) for kw in matched_keywords_lower):
-                hashtags.extend(['#HaryanaTourism', '#Tourism', '#IncredibleHaryana'])
             # Check for infrastructure-related keywords
-            elif any(any(term in kw for term in ['infrastructure', 'metro', 'highway', 'road', 'bridge', 'construction', 'flyover', 'expressway']) for kw in matched_keywords_lower):
+            if any(any(term in kw for term in ['infrastructure', 'metro', 'highway', 'road', 'bridge', 'construction', 'flyover', 'expressway', 'airport', 'railway', 'smart city', 'development', 'project']) for kw in matched_keywords_lower):
                 hashtags.extend(['#HaryanaInfrastructure', '#Development', '#Infrastructure', '#SmartCity'])
-            # Check for business-related keywords
-            elif any(any(term in kw for term in ['business', 'investment', 'startup', 'economy', 'company', 'industry', 'manufacturing', 'factory']) for kw in matched_keywords_lower):
-                hashtags.extend(['#HaryanaBusiness', '#Business', '#Investment', '#EconomicGrowth'])
-            # Check for education-related keywords
-            elif any(any(term in kw for term in ['education', 'school', 'university', 'college', 'student', 'skill']) for kw in matched_keywords_lower):
-                hashtags.extend(['#HaryanaEducation', '#Education', '#SkillDevelopment'])
-            # Check for agriculture-related keywords
-            elif any(any(term in kw for term in ['agriculture', 'farmer', 'crop', 'farming']) for kw in matched_keywords_lower):
-                hashtags.extend(['#HaryanaAgriculture', '#Agriculture', '#Farming'])
+            # Check for technology-related keywords
+            elif any(any(term in kw for term in ['technology', 'tech', 'startup', 'startups', 'innovation', 'digital', 'IT', 'software', 'app', 'platform', 'AI', 'artificial intelligence', 'machine learning', 'blockchain', 'IoT', 'cloud', 'cybersecurity', 'fintech', 'edtech', 'healthtech', 'entrepreneur', 'venture capital', 'funding', 'investment', 'unicorn']) for kw in matched_keywords_lower):
+                hashtags.extend(['#HaryanaTech', '#Technology', '#Startups', '#Innovation', '#DigitalHaryana'])
             # Check for sports-related keywords
-            elif any(any(term in kw for term in ['sports', 'athlete', 'medal', 'championship']) for kw in matched_keywords_lower):
+            elif any(any(term in kw for term in ['sports', 'athlete', 'medal', 'championship', 'stadium', 'tournament', 'cricket', 'hockey', 'wrestling', 'boxing', 'kabaddi', 'football', 'badminton', 'shooting', 'fitness', 'gym', 'training', 'coach', 'player', 'facility', 'academy']) for kw in matched_keywords_lower):
                 hashtags.extend(['#HaryanaSports', '#Sports', '#Athletes'])
-            # Check for environment-related keywords
-            elif any(any(term in kw for term in ['environment', 'green', 'pollution', 'tree', 'clean']) for kw in matched_keywords_lower):
-                hashtags.extend(['#HaryanaEnvironment', '#Environment', '#GreenHaryana'])
-            # Check for governance-related keywords
-            elif any(any(term in kw for term in ['governance', 'government', 'policy', 'scheme', 'minister']) for kw in matched_keywords_lower):
-                hashtags.extend(['#HaryanaGovernance', '#Governance', '#PublicService'])
             else:
                 # Default category-specific hashtag
                 hashtags.append('#HaryanaNews')
@@ -399,14 +384,13 @@ class TwitterService:
         # 2. Title with emoji for visual appeal
         title_emoji = "🎯"
         matched_keywords = article.get('matched_keywords', [])
-        if any(kw in ['tourism', 'heritage'] for kw in matched_keywords):
-            title_emoji = "🏛️"
-        elif any(kw in ['infrastructure', 'metro', 'highway'] for kw in matched_keywords):
+        matched_keywords_lower = [kw.lower() for kw in matched_keywords]
+        if any(any(term in kw for term in ['infrastructure', 'metro', 'highway', 'road', 'bridge', 'construction', 'flyover', 'expressway', 'airport', 'railway', 'smart city', 'development', 'project']) for kw in matched_keywords_lower):
             title_emoji = "🚇"
-        elif any(kw in ['business', 'investment'] for kw in matched_keywords):
-            title_emoji = "💼"
-        elif any(kw in ['education'] for kw in matched_keywords):
-            title_emoji = "📚"
+        elif any(any(term in kw for term in ['technology', 'tech', 'startup', 'startups', 'innovation', 'digital', 'IT', 'software', 'app', 'platform', 'AI', 'artificial intelligence', 'machine learning', 'blockchain', 'IoT', 'cloud', 'cybersecurity', 'fintech', 'edtech', 'healthtech', 'entrepreneur', 'venture capital', 'funding', 'investment', 'unicorn']) for kw in matched_keywords_lower):
+            title_emoji = "💻"
+        elif any(any(term in kw for term in ['sports', 'athlete', 'medal', 'championship', 'stadium', 'tournament', 'cricket', 'hockey', 'wrestling', 'boxing', 'kabaddi', 'football', 'badminton', 'shooting', 'fitness', 'gym', 'training', 'coach', 'player', 'facility', 'academy']) for kw in matched_keywords_lower):
+            title_emoji = "🏆"
         
         tweet_parts.append(f"{title_emoji} {title}\n")
         
@@ -495,22 +479,12 @@ class TwitterService:
             matched_keywords = article.get('matched_keywords', [])
             matched_keywords_lower = [kw.lower() for kw in matched_keywords]
             
-            if any(any(term in kw for term in ['tourism', 'heritage', 'tourist', 'monument', 'temple']) for kw in matched_keywords_lower):
-                hashtags.append('#HaryanaTourism')
-            elif any(any(term in kw for term in ['infrastructure', 'metro', 'highway', 'road', 'bridge', 'construction']) for kw in matched_keywords_lower):
+            if any(any(term in kw for term in ['infrastructure', 'metro', 'highway', 'road', 'bridge', 'construction', 'flyover', 'expressway', 'airport', 'railway', 'smart city', 'development', 'project']) for kw in matched_keywords_lower):
                 hashtags.append('#HaryanaInfrastructure')
-            elif any(any(term in kw for term in ['business', 'investment', 'startup', 'economy', 'company']) for kw in matched_keywords_lower):
-                hashtags.append('#HaryanaBusiness')
-            elif any(any(term in kw for term in ['education', 'school', 'university', 'college']) for kw in matched_keywords_lower):
-                hashtags.append('#HaryanaEducation')
-            elif any(any(term in kw for term in ['agriculture', 'farmer', 'crop']) for kw in matched_keywords_lower):
-                hashtags.append('#HaryanaAgriculture')
-            elif any(any(term in kw for term in ['sports', 'athlete', 'medal']) for kw in matched_keywords_lower):
+            elif any(any(term in kw for term in ['technology', 'tech', 'startup', 'startups', 'innovation', 'digital', 'IT', 'software', 'app', 'platform', 'AI', 'artificial intelligence', 'machine learning', 'blockchain', 'IoT', 'cloud', 'cybersecurity', 'fintech', 'edtech', 'healthtech', 'entrepreneur', 'venture capital', 'funding', 'investment', 'unicorn']) for kw in matched_keywords_lower):
+                hashtags.append('#HaryanaTech')
+            elif any(any(term in kw for term in ['sports', 'athlete', 'medal', 'championship', 'stadium', 'tournament', 'cricket', 'hockey', 'wrestling', 'boxing', 'kabaddi', 'football', 'badminton', 'shooting', 'fitness', 'gym', 'training', 'coach', 'player', 'facility', 'academy']) for kw in matched_keywords_lower):
                 hashtags.append('#HaryanaSports')
-            elif any(any(term in kw for term in ['environment', 'green', 'tree']) for kw in matched_keywords_lower):
-                hashtags.append('#HaryanaEnvironment')
-            elif any(any(term in kw for term in ['governance', 'government', 'policy']) for kw in matched_keywords_lower):
-                hashtags.append('#HaryanaGovernance')
             else:
                 hashtags.append('#HaryanaNews')
         
