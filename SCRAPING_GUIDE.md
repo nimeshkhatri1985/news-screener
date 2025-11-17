@@ -252,6 +252,44 @@ db.close()
 
 Or use the UI at http://localhost:3000/sources
 
+### Curated Non-Mainstream Haryana Sources
+
+To move beyond large national publishers (Times of India, NDTV, Indian Express, HT, ET, News18, etc.), prioritise the regional and niche outlets below. Each of these regularly carries Haryana-centric coverage and is better suited for a positive-news curation pipeline.
+
+**Regional / Hyperlocal**
+- Haryana First – governance and development announcements  
+- Daily Pioneer (Haryana bureau) – English daily with state desk  
+- Dainik Jagran (Haryana editions) – Hindi; use city/region RSS feeds  
+- Amar Ujala (Haryana pages) – Hindi; strong district coverage  
+- Punjab Kesari (Haryana edition) – Hindi; Panchkula, Karnal, Hisar beats  
+- Jagran CityPlus (Gurugram / Faridabad) – hyperlocal civic updates  
+- CitySpidey (Gurugram societies) – resident welfare associations and infrastructure  
+- Urban Update – smart-city and municipal reforms stories  
+- India CSR / CSR Mandate – corporate social responsibility projects in Haryana
+
+**Government / Official Bulletins**
+- PR Haryana (prharyana.gov.in) – state press releases  
+- Chief Minister’s Office (cmharyana.gov.in) – flagship scheme updates  
+- Invest Haryana (investharyana.in) – industrial and investment announcements  
+- Haryana Tourism (haryanatourism.gov.in) – tourism, cultural festivals, infrastructure  
+- Gurugram Metropolitan Development Authority (gmda.gov.in) – mobility and infrastructure projects  
+- Faridabad Smart City (faridabadsmartcity.gov.in) – smart city milestones  
+- HARTRON / HAREDA portals – technology, IT parks, renewable energy projects
+
+**Sector-Focused & Impact Portals**
+- Industrial News Haryana – manufacturing and MSME coverage  
+- RealtyNXT / PropGuide – Gurugram & NCR real-estate development  
+- EnergyInfraPost – power and renewable projects in Haryana  
+- Rural Marketing – agri/rural initiative highlights  
+- AgriTimes (India) – agri-tech pilots and farmer success stories  
+- SportsCrunch / Khelo India News – frequent Haryana athlete features  
+- The Better India – social impact success stories (search Haryana tags)  
+- IndiaSpend – data-backed public service improvements  
+- India Together – grassroots governance and civic stories  
+- Village Square / Gaon Connection – rural development pieces (Hindi/English)
+
+> **Tip:** When adding a source in the UI, use the site’s district- or topic-specific feed/URL (e.g., `https://www.amarujala.com/haryana`, `https://www.cityspidey.com/sector/gurugram`). If an RSS feed is unavailable, schedule a targeted scraper task or subscribe for email alerts and ingest them manually.
+
 ### Change Scraping Frequency
 
 Edit the interval in continuous mode:

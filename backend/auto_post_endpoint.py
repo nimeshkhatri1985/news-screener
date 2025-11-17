@@ -21,7 +21,7 @@ router = APIRouter()
 
 @router.post("/haryana/auto-post")
 async def auto_post_to_twitter(
-    filter_preset: str = "tourism",
+    filter_preset: str = "infrastructure",
     num_posts: int = 3,
     min_score: int = 50,
     db: Session = Depends(get_db)
@@ -30,7 +30,7 @@ async def auto_post_to_twitter(
     Automatically post top articles to Twitter
     
     Args:
-        filter_preset: Which category to post (tourism, infrastructure, etc.)
+        filter_preset: Which category to post (infrastructure, technology, sports)
         num_posts: Number of articles to post (default: 3)
         min_score: Minimum relevance score (default: 50)
     
