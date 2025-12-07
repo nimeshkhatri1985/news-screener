@@ -1,9 +1,10 @@
 name: Daily News Scraping and Twitter Posting
 
 on:
-  schedule:
-    # Run daily at 2 AM UTC (adjust timezone as needed)
-    - cron: '0 2 * * *'
+  # SCHEDULE DISABLED - Uncomment below to re-enable daily runs
+  # schedule:
+  #   # Run daily at 2 AM UTC (adjust timezone as needed)
+  #   - cron: '0 2 * * *'
   
   # Allow manual triggering
   workflow_dispatch:
